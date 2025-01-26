@@ -1,6 +1,7 @@
 <?php
 include '../config/dataBaseConnect.php';
 
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     print_r($_POST);
@@ -134,6 +135,36 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // connection close
         $connection->close();
     }
+}
+
+
+// Fetch all countries
+if ($_GET['action'] === 'getCountries') {
+    $query = "SELECT * FROM countries";
+    $result = $connection->query($query);
+
+    $countries = [];
+    while ($row = $result->fetch_assoc()) {
+        $countries[] = $row;
+    }
+
+    echo json_encode($countries);
+    exit;
+}
+
+// Fetch states for a specific country
+if ($_GET['action'] === 'getStates' && isset($_GET['country_id'])) {
+    $country_id = intval($_GET['country_id']);
+    $query = "SELECT * FROM states WHERE country_id = $country_id";
+    $result = $connection->query($query);
+
+    $states = [];
+    while ($row = $result->fetch_assoc()) {
+        $states[] = $row;
+    }
+
+    echo json_encode($states);
+    exit;
 }
 
 function test_input($data)
@@ -325,3 +356,5 @@ function test_input($data)
         });
     });
 </script>
+
+<script></script>

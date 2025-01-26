@@ -1,20 +1,20 @@
 <?php
+
 include '../config/dataBaseConnect.php';
-include 'formValidation.php'; // Include the validation function
+include './formValidation.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Call the validation function
     $errors = validate_form($_POST);
 
     if (empty($errors)) {
-        // If no errors, proceed with form processing and insertion
         $firstName = $_POST['firstName'];
         $lastName = $_POST['lastName'];
         $email = $_POST['email'];
         $phoneNo = $_POST['phone'];
         $address = $_POST['address'];
         $country = $_POST['country'];
-        $state = $_POST['states'];
+        $state = $_POST['state'];
         $pincode = $_POST['pincode'];
         $password = $_POST['password'];
 
@@ -31,21 +31,56 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             echo "Error inserting data: " . $connection->error;
         }
 
-        // Close the connection
         $connection->close();
     }
 }
+
+// Fetch countries
+if (isset($_GET['action']) && $_GET['action'] === 'getCountries') {
+    header('Content-Type: application/json');
+    $query = "SELECT id, name FROM countries";
+    $result = $connection->query($query);
+
+    $countries = [];
+    while ($row = $result->fetch_assoc()) {
+        $countries[] = $row;
+    }
+
+    echo json_encode($countries);
+    exit;
+}
+
+// Fetch states
+if (isset($_GET['action']) && $_GET['action'] === 'getStates' && isset($_GET['country_id'])) {
+    header('Content-Type: application/json');
+
+    $countryId = intval($_GET['country_id']);
+    $query = "SELECT id, name FROM states WHERE country_id = $countryId";
+    $result = $connection->query($query);
+
+    $states = [];
+    while ($row = $result->fetch_assoc()) {
+        $states[] = $row;
+    }
+
+    echo json_encode($states);
+    exit;
+}
+
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registration</title>
-    <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css">
 </head>
+
 <body>
     <div class="container">
         <h1> Registration form</h1>
@@ -86,25 +121,47 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <span class="error"><?php echo $errors['address'] ?? ''; ?></span>
             </div>
 
-            <!-- Country Field -->
             <div class="form_group">
-                <label for="country">Country :</label>
-                <select name="country" id="selectCountry">
+                <label for="country">Country:</label>
+                <select id="country" name="country">
                     <option value="">Select Country</option>
-                    <!-- Country options dynamically added -->
+                    <?php
+                    // // Fetch countries from the database
+                    // $countriesQuery = "SELECT * FROM countries";
+                    // $countriesResult = $connection->query($countriesQuery);
+
+                    // while ($country = $countriesResult->fetch_assoc()) {
+                    //     // Check if the country was selected
+                    //     $selected = ($_POST['country'] ?? '') == $country['id'] ? 'selected' : '';
+                    //     echo "<option value='{$country['id']}' $selected>{$country['name']}</option>";
+                    // }
+                    ?>
                 </select>
                 <span class="error"><?php echo $errors['country'] ?? ''; ?></span>
             </div>
 
-            <!-- State Field -->
             <div class="form_group">
-                <label for="state">State :</label>
-                <select name="states" id="selectStates">
+                <label for="state">State:</label>
+                <select id="state" name="state">
                     <option value="">Select State</option>
-                    <!-- State options dynamically added -->
+                    <?php
+                    if (!empty($_POST['country'])) {
+                        // Fetch states based on selected country
+                        $countryId = intval($_POST['country']);
+                        $statesQuery = "SELECT * FROM states WHERE country_id = $countryId";
+                        $statesResult = $connection->query($statesQuery);
+
+                        while ($state = $statesResult->fetch_assoc()) {
+                            // Check if this state was selected in the form submission
+                            $selected = (isset($_POST['state']) && $_POST['state'] == $state['id']) ? 'selected' : '';
+                            echo "<option value='{$state['id']}' $selected>{$state['name']}</option>";
+                        }
+                    }
+                    ?>  
                 </select>
                 <span class="error"><?php echo $errors['state'] ?? ''; ?></span>
             </div>
+
 
             <!-- Pincode Field -->
             <div class="form_group">
@@ -138,94 +195,76 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </form>
     </div>
 </body>
+
 </html>
 
+<script>
 
-    <script>
-        const country = document.getElementById("selectCountry");
-        const state = document.getElementById("selectStates");
-        state.disabled = true;
-        country.addEventListener("change", stateHandle);
+document.addEventListener('DOMContentLoaded', function () {
+    const countrySelect = document.getElementById('country');
+    const stateSelect = document.getElementById('state');
+    const selectedCountry = '<?= $_POST['country'] ?? '' ?>';
+    const selectedState = '<?= $_POST['state'] ?? '' ?>';
 
-        function stateHandle() {
-            if (country.value === " ") {
-                state.disabled = true;
-            } else {
-                state.disabled = false;
-            }
-        }
+    // Fetch countries only once
+    fetch('http://localhost/core_PHP-databse/views/registration.php?action=getCountries')
+        .then(response => response.json())
+        .then(countries => {
+            countries.forEach(country => {
+                const option = document.createElement('option');
+                option.value = country.id;
+                option.textContent = country.name;
 
-        // dynamic
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log("on DOm");
-
-            const countries = {
-                "India": ["Gujarat", "Maharastra", "Tamilnadu", "Rajasthan"],
-                "canada": ["Alberta", "BritishColumbia", "Manitoba", "Quebec"],
-                "USA": ["California", "Alaska", "Georgia"],
-                "Japan": ["Hokkaido", "Fukushima", "Hiroshima"]
-            };
-            const countrySelect = document.getElementById('selectCountry');
-            const stateSelect = document.getElementById('selectStates');
-            const selectedCountry = "<?php echo isset($_POST['country']) ? $_POST['country'] : ''; ?>";
-            const selectedState = "<?php echo isset($_POST['states']) ? $_POST['states'] : ''; ?>";
-
-            // console.log("selectedCountry", selectedCountry);
-
-            for (let country in countries) {
-                // console.log("country", country);
-
-                let option = document.createElement('option');
-                option.value = country;
-                option.textContent = country;
-                if (selectedCountry && country == selectedCountry) {
+                // Preselect the country if it matches the submitted value
+                if (country.id === selectedCountry) {
                     option.selected = true;
                 }
-                // console.log("option", option);
 
                 countrySelect.appendChild(option);
-            }
-
-            stateSelect.innerHTML = '<option value="" disabled selected>Select a state</option>';
-
-            let states = countries[countrySelect.value];
-            if (states) {
-                console.log("dada");
-
-                for (let state of states) {
-                    let option = document.createElement('option');
-                    option.value = state;
-                    option.innerText = state;
-                    if (selectedState && state == selectedState) {
-                        option.selected = true;
-                    }
-                    console.log("option", option);
-
-                    stateSelect.appendChild(option);
-                }
-            }
-
-            countrySelect.addEventListener('change', function() {
-                console.log("nonad add");
-
-                stateSelect.innerHTML = '<option value="" disabled selected>Select a state</option>';
-
-                let states = countries[countrySelect.value];
-                for (let state of states) {
-                    let option = document.createElement('option');
-                    option.value = state;
-                    option.innerText = state;
-                    if (selectedState && state == selectedState) {
-                        option.selected = true;
-                    }
-                    console.log("option", option);
-
-                    stateSelect.appendChild(option);
-                }
             });
-        })
-    </script>
 
+            // If a country is preselected, fetch states
+            if (selectedCountry) {
+                fetchStates(selectedCountry, selectedState);
+            }
+        })
+        .catch(error => console.error('Error fetching countries:', error));
+
+    // Event listener for country change
+    countrySelect.addEventListener('change', function () {
+        const countryId = this.value;
+        stateSelect.innerHTML = '<option value="">Select State</option>'; // Clear previous states
+
+        if (countryId) {
+            fetchStates(countryId);
+        }
+    });
+
+    // Fetch states for the selected country
+    function fetchStates(countryId, preselectedState = '') {
+        fetch(`http://localhost/core_PHP-databse/views/registration.php?action=getStates&country_id=${countryId}`)
+            .then(response => response.json())
+            .then(states => {
+                states.forEach(state => {
+                    const option = document.createElement('option');
+                    option.value = state.id;
+                    option.textContent = state.name;
+
+                    // Preselect the state if it matches the submitted value
+                    if (state.id === preselectedState) {
+                        option.selected = true;
+                    }
+
+                    stateSelect.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Error fetching states:', error));
+    }
+});
+
+
+  
+</script>
 
 </body>
 

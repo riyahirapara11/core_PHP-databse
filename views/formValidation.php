@@ -57,10 +57,10 @@ function validate_form($data) {
     }
 
     // Validate State
-    if (empty($data["states"])) {
+    if (empty($data["state"])) {
         $errors['state'] = "Must select a state";
     } else {
-        $state = test_input($data["states"]);
+        $state = test_input($data["state"]);
     }
 
     // Validate Pincode

@@ -1,6 +1,6 @@
 <?php
 include '../config/dataBaseConnect.php';
-include './pagination2.php';
+include './pagination.php';
 
 session_start();
 if (!isset($_SESSION['email']) && !isset($_SESSION['password'])) {
@@ -31,6 +31,7 @@ $state_filter = $paginationData['state_filter'];
     <title>Dashboard</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
+
     <link rel="stylesheet" href="./css/dashboardStyle.css">
 </head>
 
@@ -71,10 +72,8 @@ $state_filter = $paginationData['state_filter'];
                 <?php
                 $countries = $connection->query("SELECT DISTINCT country FROM `users`");
                 while ($row = $countries->fetch_assoc()) {
-                    if (preg_match("/^[a-zA-Z\s]+$/", $row['country'])) { // Validate only alphabetic characters
-                        $selected = $country_filter == $row['country'] ? 'selected' : '';
-                        echo "<option value='{$row['country']}' $selected>{$row['country']}</option>";
-                    }
+                    $selected = $country_filter == $row['country'] ? 'selected' : '';
+                    echo "<option value='{$row['country']}' $selected>{$row['country']}</option>";
                 }
                 ?>
             </select>
@@ -84,10 +83,8 @@ $state_filter = $paginationData['state_filter'];
                 <?php
                 $states = $connection->query("SELECT DISTINCT state FROM `users`");
                 while ($row = $states->fetch_assoc()) {
-                    if (preg_match("/^[a-zA-Z\s]+$/", $row['state'])) { // Validate only alphabetic characters
-                        $selected = $state_filter == $row['state'] ? 'selected' : '';
-                        echo "<option value='{$row['state']}' $selected>{$row['state']}</option>";
-                    }
+                    $selected = $state_filter == $row['state'] ? 'selected' : '';
+                    echo "<option value='{$row['state']}' $selected>{$row['state']}</option>";
                 }
                 ?>
             </select>
