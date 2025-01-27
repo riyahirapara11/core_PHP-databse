@@ -1,0 +1,227 @@
+To implement a **Forgot Password** functionality in PHP, you need to allow users to reset their password by sending a **reset link** to their email address. Here’s a step-by-step guide on how to implement this:
+
+### Steps to Implement Forgot Password:
+
+1. **Create a Forgot Password Form (HTML)**
+2. **Handle Form Submission (PHP)**: When the user submits the email address, check if it exists in the database.
+3. **Generate a Password Reset Token**: Generate a unique token and save it to the database.
+4. **Send Reset Link via Email**: Send an email to the user with a reset link containing the token.
+5. **Create a Reset Password Form**: Allow the user to enter a new password.
+6. **Verify the Token and Update the Password**: Check if the token is valid, and if so, allow the user to reset the password.
+
+---
+
+### 1. **Create Forgot Password Form (HTML)**
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forgot Password</title>
+</head>
+
+<body>
+    <h1>Forgot Password</h1>
+    <form method="POST" action="forgot-password.php">
+        <div>
+            <label for="email">Enter your email:</label>
+            <input type="email" name="email" id="email" required>
+        </div>
+        <div>
+            <button type="submit">Send Reset Link</button>
+        </div>
+    </form>
+</body>
+
+</html>
+```
+
+---
+
+### 2. **Handle Form Submission (PHP)**
+
+In the `forgot-password.php` file, we will handle the form submission. If the email exists in the database, we generate a reset token and send the reset link to the user via email.
+
+```php
+<?php
+include 'config/dataBaseConnect.php';  // Include database connection
+use PHPMailer\PHPMailer\PHPMailer;  // Include PHPMailer class for sending emails
+use PHPMailer\PHPMailer\Exception;  // Include PHPMailer Exception class
+
+require 'vendor/autoload.php';  // Assuming you're using Composer to autoload PHPMailer classes
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    // Get the email entered by the user
+    $email = $_POST['email'];
+
+    // Check if the email exists in the database
+    $query = "SELECT id FROM users WHERE email = ?";
+    $stmt = $connection->prepare($query);
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    // If email exists in the database, generate reset token and send an email
+    if ($result->num_rows > 0) {
+        $user = $result->fetch_assoc();
+        $userId = $user['id'];
+
+        // Generate a unique reset token (could use random bytes or UUID)
+        $token = bin2hex(random_bytes(50));
+        $expiry = date("Y-m-d H:i:s", strtotime("+1 hour"));
+
+        // Store the reset token and expiry time in the database
+        $query = "INSERT INTO password_resets (user_id, token, expiry) VALUES (?, ?, ?)";
+        $stmt = $connection->prepare($query);
+        $stmt->bind_param("iss", $userId, $token, $expiry);
+        $stmt->execute();
+
+        // Send the reset link via email
+        $resetLink = "http://localhost/reset-password.php?token=" . $token;
+
+        // Use PHPMailer to send the email
+        $mail = new PHPMailer(true);
+        try {
+            $mail->isSMTP();
+            $mail->Host = 'smtp.gmail.com';  // SMTP server (use your email provider's SMTP server)
+            $mail->SMTPAuth = true;
+            $mail->Username = 'your_email@gmail.com';  // Sender's email
+            $mail->Password = 'your_email_password';  // Sender's email password
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port = 587;
+
+            $mail->setFrom('your_email@gmail.com', 'Your Website Name');
+            $mail->addAddress($email);  // Add recipient email address
+            $mail->Subject = 'Password Reset Request';
+            $mail->Body    = "Click the link below to reset your password:\n\n" . $resetLink;
+
+            $mail->send();
+            echo 'Reset link sent to your email.';
+        } catch (Exception $e) {
+            echo "Error sending email: " . $mail->ErrorInfo;
+        }
+    } else {
+        echo "Email not found.";
+    }
+}
+?>
+```
+
+---
+
+### 3. **Create a Reset Password Form (HTML)**
+
+Create a form for the user to input a new password. This form will be accessed when the user clicks the reset link sent to their email.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Password</title>
+</head>
+
+<body>
+    <h1>Reset Password</h1>
+    <form method="POST" action="reset-password.php">
+        <input type="hidden" name="token" value="<?= $_GET['token'] ?>">
+        <div>
+            <label for="password">New Password:</label>
+            <input type="password" name="password" id="password" required>
+        </div>
+        <div>
+            <button type="submit">Reset Password</button>
+        </div>
+    </form>
+</body>
+
+</html>
+```
+
+---
+
+### 4. **Verify Token and Update Password (PHP)**
+
+In the `reset-password.php` file, we will check if the token is valid (i.e., it exists in the database and hasn’t expired), then allow the user to set a new password.
+
+```php
+<?php
+include 'config/dataBaseConnect.php';  // Include database connection
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $token = $_POST['token'];
+    $password = $_POST['password'];
+
+    // Check if the token exists in the password_resets table
+    $query = "SELECT user_id, expiry FROM password_resets WHERE token = ?";
+    $stmt = $connection->prepare($query);
+    $stmt->bind_param("s", $token);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        $resetRequest = $result->fetch_assoc();
+
+        // Check if the token has expired
+        if (strtotime($resetRequest['expiry']) > time()) {
+            // The token is valid, proceed with password reset
+            $userId = $resetRequest['user_id'];
+
+            // Hash the new password
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+
+            // Update the user's password in the database
+            $query = "UPDATE users SET password = ? WHERE id = ?";
+            $stmt = $connection->prepare($query);
+            $stmt->bind_param("si", $hashedPassword, $userId);
+            $stmt->execute();
+
+            // Delete the token from the password_resets table (token can only be used once)
+            $query = "DELETE FROM password_resets WHERE token = ?";
+            $stmt = $connection->prepare($query);
+            $stmt->bind_param("s", $token);
+            $stmt->execute();
+
+            echo "Your password has been reset successfully.";
+        } else {
+            echo "The reset link has expired.";
+        }
+    } else {
+        echo "Invalid token.";
+    }
+}
+?>
+```
+
+---
+
+### 5. **Database Structure**
+
+Make sure to add a table for storing password reset tokens.
+
+```sql
+CREATE TABLE password_resets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    token VARCHAR(255) NOT NULL,
+    expiry DATETIME NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+```
+
+### Additional Considerations:
+
+- **Email sending**: Ensure you use proper email credentials and a real email SMTP server (e.g., Gmail or any other provider).
+- **Security**: Always validate the email format, use secure password hashing (`password_hash`), and ensure tokens have an expiry time.
+- **User experience**: You can show more helpful messages to the user (e.g., "If an account with that email exists, you will receive a reset link").
+
+---
+
+This is a basic implementation of the Forgot Password functionality in PHP. You can improve it further by using libraries like **PHPMailer** for more complex email sending, **validation** for token expiration, and **security** measures like rate-limiting requests.
+
+Let me know if you need further help!

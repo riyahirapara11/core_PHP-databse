@@ -1,3 +1,5 @@
+
+
 <?php
 include '../config/dataBaseConnect.php';
 include './pagination.php';
@@ -9,16 +11,15 @@ if (!isset($_SESSION['email']) && !isset($_SESSION['password'])) {
     exit;
 }
 
-// Get the pagination results
-$paginationData = pagination($connection);
+$paginationData = listUser($connection);
 $result = $paginationData['result'];
-$total_pages = $paginationData['total_pages'];
+$totalPages = $paginationData['totalPages'];
 $searchResult = $paginationData['search'];
-$page = $paginationData['current_page'];
-$sort_column = $paginationData['sort_column'];
-$sort_order = $paginationData['sort_order'];
-$country_filter = $paginationData['country_filter'];
-$state_filter = $paginationData['state_filter'];
+$page = $paginationData['currentPage'];
+$sortColumn = $paginationData['sortColumn'];
+$sortOrder = $paginationData['sortOrder'];
+$countryFilter = $paginationData['countryFilter'];
+$stateFilter = $paginationData['stateFilter'];
 
 ?>
 
@@ -67,23 +68,23 @@ $state_filter = $paginationData['state_filter'];
     <!-- Filter Form -->
     <form action="" method="GET">
         <div class="row">
-            <select name="country_filter">
+            <select name="countryFilter">
                 <option value="">Filter by Country</option>
                 <?php
                 $countries = $connection->query("SELECT DISTINCT country FROM `users`");
                 while ($row = $countries->fetch_assoc()) {
-                    $selected = $country_filter == $row['country'] ? 'selected' : '';
+                    $selected = $countryFilter == $row['country'] ? 'selected' : '';
                     echo "<option value='{$row['country']}' $selected>{$row['country']}</option>";
                 }
                 ?>
             </select>
 
-            <select name="state_filter">
+            <select name="stateFilter">
                 <option value="">Filter by State</option>
                 <?php
                 $states = $connection->query("SELECT DISTINCT state FROM `users`");
                 while ($row = $states->fetch_assoc()) {
-                    $selected = $state_filter == $row['state'] ? 'selected' : '';
+                    $selected = $stateFilter == $row['state'] ? 'selected' : '';
                     echo "<option value='{$row['state']}' $selected>{$row['state']}</option>";
                 }
                 ?>
@@ -102,27 +103,27 @@ $state_filter = $paginationData['state_filter'];
             <thead>
                 <tr>
                     <th>
-                        <a href="?sort_column=id&sort_order=<?= $sort_order === 'ASC' ? 'DESC' : 'ASC'; ?>">
+                        <a href="?sortColumn=id&sortOrder=<?= $sortOrder === 'ASC' ? 'DESC' : 'ASC'; ?>">
                             Id
-                            <i class="fas fa-sort sort-icon <?= $sort_column === 'id' ? ($sort_order === 'ASC' ? 'fa-sort-up active' : 'fa-sort-down active') : '' ?>"></i>
+                            <i class="fas fa-sort sort-icon <?= $sortColumn === 'id' ? ($sortOrder === 'ASC' ? 'fa-sort-up active' : 'fa-sort-down active') : '' ?>"></i>
                         </a>
                     </th>
                     <th>
-                        <a href="?sort_column=first_name&sort_order=<?= $sort_order === 'ASC' ? 'DESC' : 'ASC'; ?>">
+                        <a href="?sortColumn=first_name&sortOrder=<?= $sortOrder === 'ASC' ? 'DESC' : 'ASC'; ?>">
                             First Name
-                            <i class="fas fa-sort sort-icon <?= $sort_column === 'first_name' ? ($sort_order === 'ASC' ? 'fa-sort-up active' : 'fa-sort-down active') : '' ?>"></i>
+                            <i class="fas fa-sort sort-icon <?= $sortColumn === 'first_name' ? ($sortOrder === 'ASC' ? 'fa-sort-up active' : 'fa-sort-down active') : '' ?>"></i>
                         </a>
                     </th>
                     <th>
-                        <a href="?sort_column=last_name&sort_order=<?= $sort_order === 'ASC' ? 'DESC' : 'ASC'; ?>">
+                        <a href="?sortColumn=last_name&sortOrder=<?= $sortOrder === 'ASC' ? 'DESC' : 'ASC'; ?>">
                             Last Name
-                            <i class="fas fa-sort sort-icon <?= $sort_column === 'last_name' ? ($sort_order === 'ASC' ? 'fa-sort-up active' : 'fa-sort-down active') : '' ?>"></i>
+                            <i class="fas fa-sort sort-icon <?= $sortColumn === 'last_name' ? ($sortOrder === 'ASC' ? 'fa-sort-up active' : 'fa-sort-down active') : '' ?>"></i>
                         </a>
                     </th>
                     <th>
-                        <a href="?sort_column=email&sort_order=<?= $sort_order === 'ASC' ? 'DESC' : 'ASC'; ?>">
+                        <a href="?sortColumn=email&sortOrder=<?= $sortOrder === 'ASC' ? 'DESC' : 'ASC'; ?>">
                             Email
-                            <i class="fas fa-sort sort-icon <?= $sort_column === 'email' ? ($sort_order === 'ASC' ? 'fa-sort-up active' : 'fa-sort-down active') : '' ?>"></i>
+                            <i class="fas fa-sort sort-icon <?= $sortColumn === 'email' ? ($sortOrder === 'ASC' ? 'fa-sort-up active' : 'fa-sort-down active') : '' ?>"></i>
                         </a>
                     </th>
                     <th>Phone NO.</th>
@@ -171,11 +172,11 @@ $state_filter = $paginationData['state_filter'];
                 echo '<a href="?page=' . ($page - 1) . '&search=' . $searchResult . '">Previous</a>';
             }
 
-            for ($i = 1; $i <= $total_pages; $i++) {
+            for ($i = 1; $i <= $totalPages; $i++) {
                 echo '<a href="?page=' . $i . '&search=' . $searchResult . '">' . $i . '</a>';
             }
 
-            if ($page < $total_pages) {
+            if ($page < $totalPages) {
                 echo '<a href="?page=' . ($page + 1) . '&search=' . $searchResult . '">Next</a>';
             }
             ?>
@@ -186,7 +187,6 @@ $state_filter = $paginationData['state_filter'];
     <script>
         const searchBox = document.getElementById("search-box");
 
-        // Restore focus and caret position after reload
         window.addEventListener("load", function() {
             searchBox.focus();
             const value = searchBox.value;
@@ -194,7 +194,6 @@ $state_filter = $paginationData['state_filter'];
             searchBox.value = value;
         });
 
-        // Submit the form on every input
         searchBox.addEventListener("input", function() {
             document.getElementById("search-form").submit();
         });
