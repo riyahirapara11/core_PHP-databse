@@ -1,8 +1,6 @@
-
-
 <?php
 include '../config/dataBaseConnect.php';
-include './pagination.php';
+include './crud/pagination.php';
 
 session_start();
 if (!isset($_SESSION['email']) && !isset($_SESSION['password'])) {
@@ -96,7 +94,6 @@ $stateFilter = $paginationData['stateFilter'];
             </div>
         </div>
     </form>
-
     <!-- Table -->
     <div>
         <table>
@@ -200,4 +197,5 @@ $stateFilter = $paginationData['stateFilter'];
     </script>
 
 </body>
+
 </html>

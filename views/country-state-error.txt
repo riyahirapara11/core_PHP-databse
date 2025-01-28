@@ -1,0 +1,188 @@
+Below is an optimized solution for your project structure, making your PHP and JavaScript reusable, dynamic, and maintainable. I have separated logic, applied DRY principles, and structured files for better readability. Below is a suggested refactor for your code:
+
+---
+
+### **Folder Structure**
+
+```
+root php
+├── config
+│   └── databaseConnect.php
+├── views
+│   ├── css
+│   │   └── style.css
+│   ├── js
+│   │   └── country-state.js
+│   ├── crud
+│   │   ├── addUser.php
+│   │   ├── editUser.php
+│   │   └── listingUser.php
+│   ├── api
+│   │   └── locationData.php
+│   ├── registration.php
+│   ├── login.php
+│   └── dashboard.php
+```
+
+---
+
+### **1. JavaScript File (`country-state.js`)**
+
+Move JavaScript code for dynamic country and state fetching to `views/js/country-state.js`. Here's the updated code:
+
+```javascript
+document.addEventListener('DOMContentLoaded', function () {
+    const countrySelect = document.getElementById('country');
+    const stateSelect = document.getElementById('state');
+    
+    const apiBaseUrl = `${window.location.origin}/php/views/api/locationData.php`;
+
+    const selectedCountry = document.getElementById('country').dataset.selected || '';
+    const selectedState = document.getElementById('state').dataset.selected || '';
+
+    fetch(`${apiBaseUrl}?action=getCountries`)
+        .then(response => response.json())
+        .then(countries => {
+            countries.forEach(country => {
+                const option = document.createElement('option');
+                option.value = country.id;
+                option.textContent = country.name;
+                if (country.id === selectedCountry) {
+                    option.selected = true;
+                }
+                countrySelect.appendChild(option);
+            });
+
+            if (selectedCountry) {
+                fetchStates(selectedCountry, selectedState);
+            }
+        })
+        .catch(error => console.error('Error fetching countries:', error));
+
+    countrySelect.addEventListener('change', function () {
+        const countryId = this.value;
+        stateSelect.innerHTML = '<option value="">Select State</option>';
+
+        if (countryId) {
+            fetchStates(countryId);
+        }
+    });
+
+    function fetchStates(countryId, preselectedState = '') {
+        fetch(`${apiBaseUrl}?action=getStates&country_id=${countryId}`)
+            .then(response => response.json())
+            .then(states => {
+                states.forEach(state => {
+                    const option = document.createElement('option');
+                    option.value = state.id;
+                    option.textContent = state.name;
+                    if (state.id === preselectedState) {
+                        option.selected = true;
+                    }
+                    stateSelect.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Error fetching states:', error));
+    }
+});
+```
+
+---
+
+### **2. API File (`locationData.php`)**
+
+Create a separate API file at `views/api/locationData.php` for handling country and state data:
+
+```php
+<?php
+include '../../config/dataBaseConnect.php';
+
+header("Access-Control-Allow-Origin: *");
+header("Content-Type: application/json");
+
+if (isset($_GET['action'])) {
+    if ($_GET['action'] === 'getCountries') {
+        $query = "SELECT id, name FROM countries";
+        $result = $connection->query($query);
+
+        $countries = [];
+        while ($row = $result->fetch_assoc()) {
+            $countries[] = $row;
+        }
+        echo json_encode($countries);
+        exit;
+    }
+
+    if ($_GET['action'] === 'getStates' && isset($_GET['country_id'])) {
+        $countryId = $_GET['country_id'];
+        $query = "SELECT id, name FROM states WHERE country_id = ?";
+        
+        $stmt = $connection->prepare($query);
+        $stmt->bind_param('i', $countryId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $states = [];
+        while ($row = $result->fetch_assoc()) {
+            $states[] = $row;
+        }
+        echo json_encode($states);
+        exit;
+    }
+}
+
+http_response_code(400);
+echo json_encode(["error" => "Invalid action or missing parameters"]);
+?>
+```
+
+---
+
+### **3. Update HTML (Registration and Other Forms)**
+
+Here’s the updated form for `registration.php`:
+
+```php
+<select name="country" id="country" data-selected="<?= $_POST['country'] ?? '' ?>">
+    <option value="">Select Country</option>
+</select>
+
+<select name="state" id="state" data-selected="<?= $_POST['state'] ?? '' ?>">
+    <option value="">Select State</option>
+</select>
+
+<script src="./js/country-state.js"></script>
+```
+
+---
+
+### **4. Usage Across Multiple Pages**
+
+Simply include the same form structure and JavaScript in `addUser.php`, `editUser.php`, and `registration.php`. Example in `addUser.php`:
+
+```php
+<?php include '../api/locationData.php'; ?>
+<form method="post" action="">
+    <label for="country">Country:</label>
+    <select name="country" id="country">
+        <option value="">Select Country</option>
+    </select>
+
+    <label for="state">State:</label>
+    <select name="state" id="state">
+        <option value="">Select State</option>
+    </select>
+</form>
+<script src="../js/country-state.js"></script>
+```
+
+---
+
+### **5. Benefits of the Refactor**
+
+- **Separation of Concerns:** API, form logic, and styling are now separate.
+- **Reusability:** You can use the same `country-state.js` and API across different views.
+- **Dynamic URLs:** Fetch URLs automatically adjust based on the server's root path.
+- **Database Security:** Prepared statements are used to prevent SQL injection.
+
+This setup will improve maintainability and efficiency in your project.

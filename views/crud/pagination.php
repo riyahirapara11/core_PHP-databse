@@ -1,4 +1,7 @@
 <?php
+include '../config/dataBaseConnect.php';
+// include './crud/pagination.php' ;
+
 
 function listUser($connection) {
     $recordsPerPage = 5;
@@ -7,11 +10,14 @@ function listUser($connection) {
     $page = isset($_GET['page']) ? intval($_GET['page']) : 1;
     $startFrom = ($page - 1) * $recordsPerPage;
 
+    // Get search query and filter values
     $searchResult = isset($_GET['search']) ? $connection->real_escape_string($_GET['search']) : '';
-    $sortColumn = isset($_GET['sortColumn']) ? $_GET['sortColumn'] : 'id';
-    $sortOrder = isset($_GET['sortOrder']) && $_GET['sortOrder'] === 'DESC' ? 'DESC' : 'ASC';
     $countryFilter = isset($_GET['countryFilter']) ? $connection->real_escape_string($_GET['countryFilter']) : '';
     $stateFilter = isset($_GET['stateFilter']) ? $connection->real_escape_string($_GET['stateFilter']) : '';
+
+    // Sorting values
+    $sortColumn = isset($_GET['sortColumn']) ? $_GET['sortColumn'] : 'id';
+    $sortOrder = isset($_GET['sortOrder']) && $_GET['sortOrder'] === 'DESC' ? 'DESC' : 'ASC';
 
     // Allowed columns for sorting
     $allowedColumns = ['id', 'first_name', 'last_name', 'email'];
@@ -19,6 +25,8 @@ function listUser($connection) {
 
     // Build the WHERE clause
     $whereClause = "1=1"; // Default condition for flexibility
+
+    // Apply the filters and search query
     if (!empty($searchResult)) {
         $whereClause .= " AND CONCAT(first_name, ' ', last_name, email) LIKE '%$searchResult%'";
     }
@@ -51,6 +59,7 @@ function listUser($connection) {
     $totalRecords = $countRow['total'];
     $totalPages = ceil($totalRecords / $recordsPerPage);
 
+    // Return result and filter values
     return [
         'result' => $result,
         'totalPages' => $totalPages,
@@ -62,4 +71,5 @@ function listUser($connection) {
         'stateFilter' => $stateFilter,
     ];
 }
+
 ?>

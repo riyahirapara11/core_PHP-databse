@@ -1,0 +1,142 @@
+To achieve the desired functionality, where the search query doesn't override the filter and maintains the applied filter data, you need to adjust the order in which the query parameters are applied.
+
+Right now, your search query is being appended at the end, which causes it to override the filters. To avoid this, we can modify the approach by making sure the search query only applies **on top of the filters**, but not override them.
+
+Here’s how you can modify the logic:
+
+1. **Ensure that filters are applied first**.
+2. **Only modify the query when search parameters are provided**, but without clearing the applied filters.
+
+### Updated Code Logic for `pagination.php`:
+
+```php
+<?php
+
+function listUser($connection) {
+    $recordsPerPage = 5;
+
+    // Get the current page, filters, and search query
+    $page = isset($_GET['page']) ? intval($_GET['page']) : 1;
+    $startFrom = ($page - 1) * $recordsPerPage;
+
+    // Get the search and filter parameters
+    $searchResult = isset($_GET['search']) ? $connection->real_escape_string($_GET['search']) : '';
+    $countryFilter = isset($_GET['countryFilter']) ? $connection->real_escape_string($_GET['countryFilter']) : '';
+    $stateFilter = isset($_GET['stateFilter']) ? $connection->real_escape_string($_GET['stateFilter']) : '';
+    $sortColumn = isset($_GET['sortColumn']) ? $_GET['sortColumn'] : 'id';
+    $sortOrder = isset($_GET['sortOrder']) && $_GET['sortOrder'] === 'DESC' ? 'DESC' : 'ASC';
+
+    // Allowed columns for sorting
+    $allowedColumns = ['id', 'first_name', 'last_name', 'email'];
+    $sortColumn = in_array($sortColumn, $allowedColumns) ? $sortColumn : 'id';
+
+    // Build the WHERE clause, applying filters first
+    $whereClause = "1=1"; // Default condition for flexibility
+
+    // Apply country filter
+    if (!empty($countryFilter)) {
+        $whereClause .= " AND country = '$countryFilter'";
+    }
+
+    // Apply state filter
+    if (!empty($stateFilter)) {
+        $whereClause .= " AND state = '$stateFilter'";
+    }
+
+    // Apply search query (only if there is a search term)
+    if (!empty($searchResult)) {
+        $whereClause .= " AND CONCAT(first_name, ' ', last_name, email) LIKE '%$searchResult%'";
+    }
+
+    // Main query with filters, search, sorting, and pagination
+    $sql = "SELECT * FROM `users` WHERE $whereClause 
+            ORDER BY $sortColumn $sortOrder 
+            LIMIT $startFrom, $recordsPerPage";
+    $result = $connection->query($sql);
+
+    if (!$result) {
+        die("SQL Query Error: " . $connection->error . " - Query: " . $sql);
+    }
+
+    // Count query for pagination
+    $countSql = "SELECT COUNT(*) AS total FROM `users` WHERE $whereClause";
+    $countResult = $connection->query($countSql);
+
+    if (!$countResult) {
+        die("Count Query Error: " . $connection->error . " - Query: " . $countSql);
+    }
+
+    $countRow = $countResult->fetch_assoc();
+    $totalRecords = $countRow['total'];
+    $totalPages = ceil($totalRecords / $recordsPerPage);
+
+    return [
+        'result' => $result,
+        'totalPages' => $totalPages,
+        'search' => $searchResult,
+        'currentPage' => $page,
+        'sortColumn' => $sortColumn,
+        'sortOrder' => $sortOrder,
+        'countryFilter' => $countryFilter,
+        'stateFilter' => $stateFilter,
+    ];
+}
+?>
+```
+
+### Explanation:
+- **Filters first**: We apply the `countryFilter` and `stateFilter` before the `searchResult`. This ensures that when the search query is added, the filters are still applied.
+- **Search only modifies the existing filtered data**: The `searchResult` is applied after the filters, not replacing them, so your filter conditions remain intact.
+
+### Update to the Form (Dashboard):
+In your `dashboard.php`, ensure the `search` field maintains the previous search query and the filters do not get reset. This can be done by pre-filling the filter fields with the existing values from the query parameters.
+
+```php
+<!-- Filter Form -->
+<form action="" method="GET">
+    <div class="row">
+        <select name="countryFilter">
+            <option value="">Filter by Country</option>
+            <?php
+            $countries = $connection->query("SELECT DISTINCT country FROM `users`");
+            while ($row = $countries->fetch_assoc()) {
+                $selected = $countryFilter == $row['country'] ? 'selected' : '';
+                echo "<option value='{$row['country']}' $selected>{$row['country']}</option>";
+            }
+            ?>
+        </select>
+
+        <select name="stateFilter">
+            <option value="">Filter by State</option>
+            <?php
+            $states = $connection->query("SELECT DISTINCT state FROM `users`");
+            while ($row = $states->fetch_assoc()) {
+                $selected = $stateFilter == $row['state'] ? 'selected' : '';
+                echo "<option value='{$row['state']}' $selected>{$row['state']}</option>";
+            }
+            ?>
+        </select>
+
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-primary">Apply Filter</button>
+            <a href="dashboard.php" class="btn btn-secondary">Reset</a>
+        </div>
+    </div>
+</form>
+
+<!-- Search -->
+<nav class="navbar navbar-light bg-light">
+    <div class="container-fluid">
+        <form method="GET" id="search-form">
+            <input type="text" id="search-box" name="search" placeholder="Search users..." value="<?= htmlspecialchars($search) ?>" />
+        </form>
+        <a href="./addUser.php"><button class="btn btn-success">+ Add New</button></a>
+    </div>
+</nav>
+```
+
+### Key Changes:
+1. **Search Query**: The search query will now only filter the already filtered data.
+2. **Pre-filled Filters**: The form will retain the applied filters and search query, so when you submit a new search or apply a filter, the form will reflect the current state of the filters.
+
+Let me know if you have any further questions!

@@ -1,88 +1,107 @@
+The issue you're encountering is due to the fact that you're storing the `country_id` (which is just the ID of the country) in the database, but you want to store the actual `country_name` and `state_name` in the `users` table instead of just their IDs.
 
-<?php
+Here’s what needs to be done:
 
-header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json");
-include '../config/dataBaseConnect.php';
-include './formValidation.php';
+### 1. **Store the country and state names in the database**
+Instead of storing the country ID and state ID, you need to store the `country_name` and `state_name` in the `users` table. This means that when you insert data into the database, you need to use the names of the selected country and state, not just their IDs.
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+### 2. **Modify the SQL query**
+You’re currently doing something like this:
+```php
+$countryList[$country]
+```
+Which stores the country as an ID or shorthand (`'1' => 'india'`).
 
-    $errors = validateForm($_POST);
+Instead, you want to store the actual **name** of the country and state in the database, which can be done by fetching the name from your `countries` and `states` tables.
 
-    if (empty($errors)) {
-        $firstName = $_POST['firstName'];
-        $lastName = $_POST['lastName'];
-        $email = $_POST['email'];
-        $phoneNo = $_POST['phone'];
-        $address = $_POST['address'];
-        $country = $_POST['country'];
-        $state = $_POST['states'];
-        $pincode = $_POST['pincode'];
-        $password = $_POST['password'];
+### 3. **Get the Country and State Names**
+Since you're using the country ID to fetch the country name, and the state ID to fetch the state name, you need to modify your query and form submission logic to fetch these names.
 
-        $options = ["cost" => 10];
-        $hashedPassword = password_hash($password, PASSWORD_DEFAULT, $options);
+Here’s how you can modify your code to store the names:
 
-        $countryList = [
-            '1' => 'india',
-            '2' => 'United States',
-            '3' => 'Canada',
-            '4' =>  'japan',
-         ];
+### Modify Your PHP Logic:
 
-        $sql = "INSERT INTO `users` (`first_name` ,`last_name`, `email`, `phone_no`, `address` , `country`, `state` , `pincode`, `password`) VALUES ('$firstName' ,'$lastName', '$email', '$phoneNo', '$address', '$countryList[$country]', '$state' , '$pincode', '$hashedPassword')";
+```php
+// Assuming $country is the country ID
+$countryQuery = "SELECT name FROM countries WHERE id = '$country'";
+$countryResult = $connection->query($countryQuery);
+$countryName = $countryResult->fetch_assoc()['name'];  // Get country name
 
-        if ($connection->query($sql)) {
-            header("Location: login.php");
-        } else {
-            echo "error inserting data .";
-            echo "Error: " . $sql . "<br>" . $connection->error;
+// Assuming $state is the state ID (which should correspond to the state ID of the selected country)
+$stateQuery = "SELECT name FROM states WHERE id = '$state' AND country_id = '$country'";
+$stateResult = $connection->query($stateQuery);
+$stateName = $stateResult->fetch_assoc()['name'];  // Get state name
+
+// Now, insert the country name and state name into the database
+$sql = "INSERT INTO `users` (`first_name`, `last_name`, `email`, `phone_no`, `address`, `country`, `state`, `pincode`, `password`) 
+        VALUES ('$firstName', '$lastName', '$email', '$phoneNo', '$address', '$countryName', '$stateName', '$pincode', '$hashedPassword')";
+```
+
+### Explanation:
+1. **Get Country Name**: Before executing your `INSERT` query, you fetch the actual country name using the `$country` ID (`$countryName`).
+2. **Get State Name**: Similarly, you fetch the state name from the `states` table using the selected `state` ID (`$stateName`).
+
+### 4. **Ensure the State is Not Disabled**
+The reason the state dropdown has the `disabled` attribute might be because you’re not properly updating the state options when the country is selected.
+
+Make sure that when the country is selected, the state dropdown is populated correctly. In your JavaScript code, after the country is selected, ensure that you're enabling the state dropdown:
+
+```javascript
+document.addEventListener('DOMContentLoaded', function() {
+    const countrySelect = document.getElementById('country');
+    const stateSelect = document.getElementById('state');
+    
+    fetch('http://localhost/php/views/registration.php?action=getCountries')
+        .then(response => response.json())
+        .then(countries => {
+            countries.forEach(country => {
+                const option = document.createElement('option');
+                option.value = country.id;
+                option.textContent = country.name;
+                countrySelect.appendChild(option);
+            });
+        });
+
+    countrySelect.addEventListener('change', function() {
+        const countryId = this.value;
+        stateSelect.innerHTML = '<option value="">Select State</option>';
+        stateSelect.disabled = false;  // Enable the state dropdown once a country is selected
+
+        if (countryId) {
+            fetchStates(countryId);
         }
+    });
 
-        $connection->close();
+    function fetchStates(countryId) {
+        fetch(`http://localhost/php/views/registration.php?action=getStates&country_id=${countryId}`)
+            .then(response => response.json())
+            .then(states => {
+                states.forEach(state => {
+                    const option = document.createElement('option');
+                    option.value = state.id;  // Store the state ID, but show the name
+                    option.textContent = state.name;
+                    stateSelect.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Error fetching states:', error));
     }
-}
+});
+```
 
-if (isset($_GET['action']) && $_GET['action'] === 'getCountries') {
-    header("Access-Control-Allow-Origin: *");
-    header("Content-Type: application/json");
+In this modification:
+- **Enable the State Dropdown**: When the country is selected, the state dropdown is enabled (`stateSelect.disabled = false`), allowing the user to choose a state.
+- **Populate the States**: The `fetchStates` function will now populate the state dropdown with the state names.
 
-    $query = "SELECT id , name FROM countries";
-    $result = $connection->query($query);
+### Final Notes:
+1. Ensure that your `country_id` and `state_id` are stored in your `states` table properly (with foreign keys to the `countries` table).
+2. The main change is ensuring that you fetch the actual **names** of the country and state when inserting data into the `users` table, instead of just inserting their IDs.
 
-    if (!$result) {
-        echo json_encode(["error" => "Database query failed: " . $connection->error]);
-        exit;
-    }
-
-    $countries = [];
-    while ($row = $result->fetch_assoc()) {
-        $countries[] = $row;
-    }
-
-    echo json_encode($countries);
-    exit;
-}
+Let me know if you need further clarification or have any more questions!
 
 
-if (isset($_GET['action']) && $_GET['action'] === 'getStates' && isset($_GET['country_id'])) {
-    header("Access-Control-Allow-Origin: *");
-    header("Content-Type: application/json");
 
-    $countryId = $_GET['country_id'];
-    $query = "SELECT id, name FROM states WHERE country_id = $countryId";
-    $result = $connection->query($query);
 
-    $states = [];
-    while ($row = $result->fetch_assoc()) {
-        $states[] = $row;
-    }
-    echo json_encode($states);
-    exit;
-}
 
-?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -147,7 +166,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'getStates' && isset($_GET['co
 
             <div class="form_group">
                 <label for="country">Country :</label>
-                <select name="country" id="country" value="">
+                <select name="country" id="country">
                     <option value="">Select Country</option>
                 </select>
                 <span class="error">
@@ -157,7 +176,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'getStates' && isset($_GET['co
 
             <div class="form_group">
                 <label for="state">State :</label>
-                <select name="state" id="state" value="">
+                <select name="state" id="state">
                     <option value="">Select State</option>
                 </select>
                 <span class="error">
@@ -192,23 +211,25 @@ if (isset($_GET['action']) && $_GET['action'] === 'getStates' && isset($_GET['co
             </div>
 
             <div class="form_group">
-                <button type="submit"> register</button>
+                <button type="submit">Register</button>
             </div>
 
             <div class="form_group">
-                <p>already have an account ? <a href="./login.php"><span>Login</span></a></p>
+                <p>Already have an account? <a href="./login.php"><span>Login</span></a></p>
             </div>
         </form>
     </div>
 </body>
 
-</html> 
+</html>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const countrySelect = document.getElementById('country');
         const stateSelect = document.getElementById('state');
         const selectedCountry = '<?= $_POST['country'] ?? '' ?>';
         const selectedState = '<?= $_POST['state'] ?? '' ?>';
+        
         fetch('http://localhost/php/views/registration.php?action=getCountries')
             .then(response => response.json())
             .then(countries => {
@@ -222,6 +243,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'getStates' && isset($_GET['co
                     }
                     countrySelect.appendChild(option);
                 });
+
                 if (selectedCountry) {
                     fetchStates(selectedCountry, selectedState);
                 }
@@ -231,6 +253,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'getStates' && isset($_GET['co
         countrySelect.addEventListener('change', function() {
             const countryId = this.value;
             stateSelect.innerHTML = '<option value="">Select State</option>';
+            stateSelect.disabled = false;
 
             if (countryId) {
                 fetchStates(countryId);
@@ -243,7 +266,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'getStates' && isset($_GET['co
                 .then(states => {
                     states.forEach(state => {
                         const option = document.createElement('option');
-                        option.value = state.name;
+                        option.value = state.id;
                         option.textContent = state.name;
                         if (state.id === preselectedState) {
                             option.selected = true;

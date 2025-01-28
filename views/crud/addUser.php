@@ -1,140 +1,37 @@
 <?php
-
-
 include '../config/dataBaseConnect.php';
 
+// insert data in database
+if ($isAnyError == false) {
+    $firstName = $_POST['firstName'];
+    $lastName = $_POST['lastName'];
+    $email = $_POST['email'];
+    $phoneNo = $_POST['phone'];
+    $address = $_POST['address'];
+    $country = $_POST['country'];
+    $state = $_POST['states'];
+    $pincode = $_POST['pincode'];
+    $password = $_POST['password'];
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    //encrypt password
+    $options = ["cost" => 10];
+    $hashedPassword = password_hash($password, PASSWORD_DEFAULT, $options);
 
-    // validations
-    $firstNameErr  = $lastNameErr = $emailErr  = $phoneErr = $addressErr  = $countryErr = $stateErr  = $pincodeErr = $passwordErr = $confirmPassErr = "";
-    $isAnyError = false;
+    $sql = "INSERT INTO `users` (`first_name` ,`last_name`, `email`, `phone_no`, `address` , `country`, `state` , `pincode`, `password`) VALUES ('$firstName' ,'$lastName', '$email', '$phoneNo', '$address', '$country', '$state' , '$pincode', '$hashedPassword')";
 
-    if (empty($_POST["firstName"])) {
-        $firstNameErr = "First Name is required";
-        $isAnyError = true;
+    if ($connection->query($sql)) {
+        session_start();
+        $_SESSION["add_message"] = "User Added Successfully !";
+        header("Location: dashboard.php");
     } else {
-        $firstName = test_input($_POST["firstName"]);
-        if (!preg_match("/^[a-zA-Z-' ]*$/", $firstName)) {
-            $firstNameErr = "Only letters and white spaces are allowed";
-            $isAnyError = true;
-        }
+        echo "error inserting data .";
+        echo "Error: " . $sql . "<br>" . $connection->error;
     }
 
-    if (empty($_POST["lastName"])) {
-        $lastNameErr = "Last Name is required";
-        $isAnyError = true;
-    } else {
-        $lastName = test_input($_POST["lastName"]);
-        if (!preg_match("/^[a-zA-Z-' ]*$/", $lastName)) {
-            $lastNameErr = "Only letters and white spaces are allowed";
-            $isAnyError = true;
-        }
-    }
-
-    if (empty($_POST["email"])) {
-        $emailErr = "Email is required";
-        $isAnyError = true;
-    } else {
-        $email = test_input($_POST["email"]);
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $emailErr = "Invalid email format";
-            $isAnyError = true;
-        }
-    }
-
-    if (empty($_POST["phone"])) {
-        $phoneErr = "Phone No. is required";
-        $isAnyError = true;
-    } else {
-        $phone = test_input($_POST["phone"]);
-        if (!preg_match("/^[0-9]{10}$/", $phone)) {
-            $phoneErr = "Phone number must be 10 digits";
-            $isAnyError = true;
-        }
-    }
-
-    if (empty($_POST["address"])) {
-        $addressErr = "Address is required";
-        $isAnyError = true;
-    } else {
-        $address = test_input($_POST["address"]);
-    }
-
-    if (empty($_POST["country"])) {
-        $countryErr = "Must select a country";
-        $isAnyError = true;
-    } else {
-        $country = test_input($_POST["country"]);
-    }
-
-    if (empty($_POST["states"])) {
-        $stateErr = "Must select a state";
-        $isAnyError = true;
-    } else {
-        $state = test_input($_POST["states"]);
-    }
-
-    if (empty($_POST["pincode"])) {
-        $pincodeErr = "Pincode is required";
-        $isAnyError = true;
-    } else {
-        $pincode = test_input($_POST["pincode"]);
-    }
-
-    if (empty($_POST["password"])) {
-        $passwordErr = "Password is required";
-        $isAnyError = true;
-    } else {
-        $password = test_input($_POST["password"]);
-        if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/', $password)) {
-            $passwordErr = "Password must be at least 8 characters,one letter,digit,special character";
-            $isAnyError = true;
-        }
-    }
-
-    if (empty($_POST["confirmPass"])) {
-        $confirmPassErr = "Confirm Password is required";
-        $isAnyError = true;
-    } else {
-        $confirmPass = test_input($_POST["confirmPass"]);
-        if ($_POST['password'] !== $_POST['confirmPass']) {
-            $confirmPassErr = "Password did not match.";
-            $isAnyError = true;
-        }
-    }
-
-    // insert data in database
-    if ($isAnyError == false) {
-        $firstName = $_POST['firstName'];
-        $lastName = $_POST['lastName'];
-        $email = $_POST['email'];
-        $phoneNo = $_POST['phone'];
-        $address = $_POST['address'];
-        $country = $_POST['country'];
-        $state = $_POST['states'];
-        $pincode = $_POST['pincode'];
-        $password = $_POST['password'];
-
-        //encrypt password
-        $options = ["cost" => 10];
-        $hashedPassword = password_hash($password, PASSWORD_DEFAULT, $options);
-
-        $sql = "INSERT INTO `users` (`first_name` ,`last_name`, `email`, `phone_no`, `address` , `country`, `state` , `pincode`, `password`) VALUES ('$firstName' ,'$lastName', '$email', '$phoneNo', '$address', '$country', '$state' , '$pincode', '$hashedPassword')";
-
-        if ($connection->query($sql)) {
-            session_start();
-            $_SESSION["add_message"] = "User Added Successfully !";
-            header("Location: dashboard.php");
-        } else {
-            echo "error inserting data .";
-            echo "Error: " . $sql . "<br>" . $connection->error;
-        }
-
-        // connection close
-        $connection->close();
-    }
+    // connection close
+    $connection->close();
 }
+
 
 
 function test_input($data)
