@@ -1,288 +1,637 @@
-To add a file upload feature for the profile photo, you can follow these steps:
+<?php
+include '../../config/dataBaseConnect.php'; // Corrected path
+include '../formValidation.php';
 
-### 1. **Modify the Database Table**
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $errors = validateForm($_POST);
 
-First, add two columns to your `users` table: one for storing the image filename and the other for the file path.
+    // File Upload Validation
+    if ($_FILES['profilePhoto']['error'] == 0) {
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+        $fileSizeLimit = 5000000; // 5MB
+        $fileType = $_FILES['profilePhoto']['type'];
+        $fileSize = $_FILES['profilePhoto']['size'];
 
-```sql
-ALTER TABLE users 
-ADD COLUMN profile_photo VARCHAR(255),
-ADD COLUMN file_path VARCHAR(255);
-```
+        if (!in_array($fileType, $allowedTypes)) {
+            $errors['profilePhoto'] = "Invalid file type. Only JPEG, PNG, and GIF are allowed.";
+        }
 
-- `profile_photo`: Store the file name of the image.
-- `file_path`: Store the path to the folder where the image is saved.
+        if ($fileSize > $fileSizeLimit) {
+            $errors['profilePhoto'] = "File size exceeds 5MB limit.";
+        }
+    }
 
-### 2. **Create the Storage Folder**
+    if (empty($errors)) {
+        $id = $_POST['id'];
+        $firstName = $_POST['firstName'];
+        $lastName = $_POST['lastName'];
+        $email = $_POST['email'];
+        $phoneNo = $_POST['phone'];
+        $address = $_POST['address'];
+        $country = $_POST['country'];
+        $state = $_POST['state'];
+        $pincode = $_POST['pincode'];
+        $password = $_POST['password'];
 
-In your project, create a `storage` folder where the uploaded images will be stored. You can place it in the root directory or inside the `views` folder. Make sure the folder has the correct permissions to allow the upload.
+        $options = ["cost" => 10];
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT, $options);
 
-```plaintext
-root/php/storage/
-```
+        $uploadDir = realpath(__DIR__ . '/../../storage/profile_images/') . '/';
+        $defaultPhoto = '/storage/default.jpg';
+        $filePath = $defaultPhoto;
 
-Set the permissions for the folder to be writable by the server. You can do this using the following command:
+        if ($_FILES['profilePhoto']['error'] == 0) {
+            $fileName = uniqid() . "_" . basename($_FILES['profilePhoto']['name']);
+            $fileDestination = $uploadDir . $fileName;
 
-```bash
-chmod 755 storage
-```
+            if (move_uploaded_file($_FILES['profilePhoto']['tmp_name'], $fileDestination)) {
+                $filePath = '/storage/profile_images/' . $fileName;
+            }
+        }
 
-### 3. **Modify the HTML Form (Edit User Page)**
+        $sql = "UPDATE `users` SET 
+                `first_name` = '$firstName',
+                `last_name` = '$lastName',
+                `email` = '$email',
+                `phone_no` = '$phoneNo',
+                `address` = '$address',
+                `country` = '$country',
+                `state` = '$state',
+                `file_path` = '$filePath'
+            WHERE `id` = '$id'";
 
-In the `editUser.php` file, add an input field for uploading the photo. Use the `enctype="multipart/form-data"` attribute in the form tag to allow file uploads.
+        if ($connection->query($sql)) {
+            session_start();
+            $_SESSION["edit_message"] = "Record Updated Successfully!";
+            header("Location: ../dashboard.php");
+            exit;
+        } else {
+            echo "Error updating data: " . $connection->error;
+        }
+    }
+}
+
+$id = $_GET['id'] ?? null;
+if ($id) {
+    $query = "SELECT * FROM `users` WHERE id = $id";
+    $result = $connection->query($query);
+    $user = $result->fetch_assoc();
+} else {
+    echo "Invalid User ID";
+    exit;
+}
+?>
+
+
+Certainly! Let's break down the **profile upload** and **edit user** code I provided, particularly focusing on the **file upload** part and **form processing**.
+
+### 1. **File Upload Validation and Handling**
+
+In your form (`editUser.php`), there is an input field for uploading a profile photo:
 
 ```html
-<form method="POST" action="editUser.php" enctype="multipart/form-data">
-    <!-- Other form fields for user info -->
-
-    <div class="form_group">
-        <label for="profilePhoto">Profile Photo:</label>
-        <input type="file" name="profilePhoto" id="profilePhoto">
-    </div>
-
-    <div class="form_group">
-        <button type="submit">Update</button>
-    </div>
-</form>
+<input type="file" id="profilePhoto" name="profilePhoto">
 ```
 
-### 4. **Handle the File Upload in PHP**
+The user selects a file (image) here. When the form is submitted, the `$_FILES` superglobal in PHP will contain the uploaded file.
 
-In the `editUser.php` file, handle the uploaded file by checking if a file has been submitted, validating the file, and then saving it in the `storage` folder.
+#### Validation:
+
+When the form is submitted (via `POST`), we handle the file upload and validate it:
 
 ```php
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Assuming other user fields are processed here...
+// File Upload Validation
+if ($_FILES['profilePhoto']['error'] == 0) {
+    $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    $fileSizeLimit = 5000000; // 5MB
+    $fileType = $_FILES['profilePhoto']['type'];
+    $fileSize = $_FILES['profilePhoto']['size'];
 
-    // Check if a file has been uploaded
-    if (isset($_FILES['profilePhoto']) && $_FILES['profilePhoto']['error'] == 0) {
-        $file = $_FILES['profilePhoto'];
-        $uploadDir = '../storage/';  // Set the folder where images will be stored
-        $fileName = uniqid() . "_" . basename($file['name']);  // Create a unique file name
-        $filePath = $uploadDir . $fileName;
-
-        // Validate file type and size (optional)
-        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-        if (in_array($file['type'], $allowedTypes) && $file['size'] < 5000000) {  // Max 5MB
-            if (move_uploaded_file($file['tmp_name'], $filePath)) {
-                // If file is uploaded successfully, save the path in the database
-                $sql = "UPDATE users SET profile_photo = ?, file_path = ? WHERE id = ?";
-                $stmt = $connection->prepare($sql);
-                $stmt->bind_param("ssi", $fileName, $filePath, $userId);
-                $stmt->execute();
-            } else {
-                echo "Error uploading file.";
-            }
-        } else {
-            echo "Invalid file type or size.";
-        }
+    // Validate file type
+    if (!in_array($fileType, $allowedTypes)) {
+        $errors['profilePhoto'] = "Invalid file type. Only JPEG, PNG, and GIF are allowed.";
     }
 
-    // Continue with other update logic (like updating user details)
-}
-```
-
-### 5. **Displaying the Profile Photo in the Dashboard**
-
-To display the uploaded profile photo in your dashboard or edit form, you can retrieve the `profile_photo` from the database and use it as the source for an `img` tag.
-
-For example:
-
-```php
-$sql = "SELECT profile_photo FROM users WHERE id = ?";
-$stmt = $connection->prepare($sql);
-$stmt->bind_param("i", $userId);
-$stmt->execute();
-$stmt->bind_result($profilePhoto);
-$stmt->fetch();
-
-// Display the profile photo if available
-if ($profilePhoto) {
-    echo '<img src="../storage/' . $profilePhoto . '" alt="Profile Photo">';
-}
-```
-
-This code checks if the user has a profile photo and, if so, displays it from the `storage` folder.
-
-### Summary of the Changes:
-- **Database**: Add columns for `profile_photo` and `file_path`.
-- **Storage Folder**: Create a `storage` folder to store the uploaded files.
-- **HTML**: Add a file input field in the form for profile photo upload.
-- **PHP**: Handle the file upload, validation, and storage in the `storage` folder, then update the database with the file name and path.
-- **Display**: Retrieve and display the photo from the `storage` folder in the dashboard.
-
-Let me know if you need more details or help!
-
-
-
-
-
-Yes, you can handle cases where the user does not upload a photo by checking if the `$_FILES` array is empty or the file is not uploaded, and in that case, you can assign a default image.
-
-Here's how you can adjust your code to handle the situation when the user doesn't upload a photo:
-
-### 1. **Default Profile Photo in Database**
-
-First, ensure that the default profile photo is stored in the database (or in the `file_path`). You can add a default image in the `profile_photo` field for existing users who haven't uploaded a photo.
-
-For example, you can set a default photo in your database like this:
-
-```sql
-UPDATE users SET profile_photo = 'default.jpg', file_path = '/path/to/default/photo.jpg' WHERE profile_photo IS NULL;
-```
-
-Alternatively, you can store a default image in your `storage` folder and use that path when a user doesn't upload a photo.
-
-### 2. **Handle Missing File Upload**
-
-In your `editUser.php` file, modify the code to check if a photo was uploaded. If not, set the profile photo to a default image.
-
-Here is how you can handle it:
-
-```php
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Assuming other user fields are processed here...
-
-    // Default profile photo
-    $defaultPhoto = 'default.jpg';  // Default image name
-    $defaultPath = '/storage/default.jpg';  // Default image path (you can adjust this path as per your setup)
-
-    // Check if a file has been uploaded
-    if (isset($_FILES['profilePhoto']) && $_FILES['profilePhoto']['error'] == 0) {
-        $file = $_FILES['profilePhoto'];
-        $uploadDir = '../storage/';  // Set the folder where images will be stored
-        $fileName = uniqid() . "_" . basename($file['name']);  // Create a unique file name
-        $filePath = $uploadDir . $fileName;
-
-        // Validate file type and size (optional)
-        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-        if (in_array($file['type'], $allowedTypes) && $file['size'] < 5000000) {  // Max 5MB
-            if (move_uploaded_file($file['tmp_name'], $filePath)) {
-                // If file is uploaded successfully, save the path in the database
-                $fileName = $fileName;  // If uploaded, use the new file
-            } else {
-                echo "Error uploading file.";
-                $fileName = $defaultPhoto;  // Fallback to default image if upload fails
-            }
-        } else {
-            echo "Invalid file type or size.";
-            $fileName = $defaultPhoto;  // Fallback to default image if invalid file type
-        }
-    } else {
-        // If no file is uploaded, use the default photo
-        $fileName = $defaultPhoto;
+    // Validate file size
+    if ($fileSize > $fileSizeLimit) {
+        $errors['profilePhoto'] = "File size exceeds 5MB limit.";
     }
-
-    // Now update the user record with the profile photo (either uploaded or default)
-    $sql = "UPDATE users SET profile_photo = ?, file_path = ? WHERE id = ?";
-    $stmt = $connection->prepare($sql);
-    $stmt->bind_param("ssi", $fileName, $filePath, $userId);
-    $stmt->execute();
-
-    // Continue with other update logic (like updating user details)
 }
 ```
 
-### 3. **Displaying the Profile Photo**
+1. **File Type Check:** The code checks whether the file type is either JPEG, PNG, or GIF. If it's not, an error message is added to the `$errors` array.
+2. **File Size Check:** It also checks whether the uploaded file exceeds the 5MB limit. If the file is too large, an error message is added.
 
-When displaying the profile photo, you can check if the `profile_photo` field is empty or `NULL`. If it is, display the default photo.
+#### File Upload Processing:
 
-For example, in your `dashboard.php` or `editUser.php` (where you display the profile photo):
+Once the file passes validation, we move the file to a designated folder (`/storage/profile_images/`):
 
 ```php
-$sql = "SELECT profile_photo FROM users WHERE id = ?";
-$stmt = $connection->prepare($sql);
-$stmt->bind_param("i", $userId);
-$stmt->execute();
-$stmt->bind_result($profilePhoto);
-$stmt->fetch();
+// Handle file upload
+$uploadDir = realpath(__DIR__ . '/../../storage/profile_images/') . '/';
+$defaultPhoto = '/storage/default.jpg';
+$filePath = $defaultPhoto; // default photo
 
-// Use default photo if no photo is uploaded
-if (!$profilePhoto) {
-    $profilePhoto = 'default.jpg';  // Default photo name if not provided
+// If there's no error, move the uploaded file
+if ($_FILES['profilePhoto']['error'] == 0) {
+    $fileName = uniqid() . "_" . basename($_FILES['profilePhoto']['name']);
+    $fileDestination = $uploadDir . $fileName;
+
+    if (move_uploaded_file($_FILES['profilePhoto']['tmp_name'], $fileDestination)) {
+        $filePath = '/storage/profile_images/' . $fileName; // Set the file path
+    }
 }
-
-// Display the profile photo (stored in the 'storage' folder)
-echo '<img src="../storage/' . $profilePhoto . '" alt="Profile Photo">';
 ```
 
-### Key Points:
+- **Destination Directory (`$uploadDir`)**: The directory where the uploaded file will be stored is determined using `realpath()`. The `profile_images` folder should exist in the `/storage/` directory. 
+- **File Name Generation:** The uploaded file is given a unique name using `uniqid()` to prevent conflicts with other files and make it unique.
+- **Move File:** The `move_uploaded_file()` function moves the uploaded file from its temporary location to the specified directory (`$uploadDir`). If the file is successfully uploaded, we update `$filePath` with the location of the file.
 
-1. **Default Image**: When no photo is uploaded, the system uses a default image (`default.jpg`).
-2. **File Upload Check**: If the user doesn't upload a photo, the system assigns the default image.
-3. **Database**: Ensure the `profile_photo` and `file_path` columns are updated correctly, either with the uploaded file or the default image.
-4. **Displaying Default Image**: When displaying the photo, check if the database field is `NULL` or empty and use the default image in that case.
+If no file is uploaded, we use a **default image** (`/storage/default.jpg`).
 
-### File Structure:
+### 2. **Database Update Query**
 
-- **Storage Folder**: Ensure the `default.jpg` image is present in the `storage` folder for users who haven't uploaded their own photo.
-- **Database**: You can optionally run a script to update all users who haven't uploaded a photo to have the `default.jpg` as their profile photo.
+After handling the form validation (and uploading the profile photo), the next step is to update the user data in the database, including the file path for the profile photo.
 
-This should ensure your application handles the missing photo scenario without causing errors and displays a default image when needed.
+```php
+$sql = "UPDATE `users` SET 
+        `first_name` = '$firstName',
+        `last_name` = '$lastName',
+        `email` = '$email',
+        `phone_no` = '$phoneNo',
+        `address` = '$address',
+        `country` = '$country',
+        `state` = '$state',
+        `file_path` = '$filePath'
+    WHERE `id` = '$id'";
+```
+
+Here:
+- The `UPDATE` SQL query updates the user's profile with the values from the form (`first_name`, `last_name`, `email`, etc.).
+- The `file_path` column in the database is updated with the location of the uploaded profile photo (`$filePath`).
+
+### 3. **Redirecting After Successful Update**
+
+If the query is successful, the user is redirected to the `dashboard.php` page with a success message:
+
+```php
+if ($connection->query($sql)) {
+    session_start();
+    $_SESSION["edit_message"] = "Record Updated Successfully!";
+    header("Location: ../dashboard.php");
+    exit;
+} else {
+    echo "Error updating data: " . $connection->error;
+}
+```
+
+- If the update is successful (`$connection->query($sql)`), a session message is set (`$_SESSION["edit_message"]`) to notify the user that the update was successful.
+- The page redirects to `dashboard.php`.
+
+### 4. **Fetching Existing Data for Editing**
+
+When the user opens the edit page, we fetch the user's data from the database based on the user `id` passed via the URL:
+
+```php
+$query = "SELECT * FROM `users` WHERE id = $id";
+$result = $connection->query($query);
+$user = $result->fetch_assoc();
+```
+
+This query fetches the user details, and the `$user` array contains the data. We then populate the form fields with this existing data, so the user can edit it:
+
+```html
+<input type="text" id="firstName" name="firstName" value="<?php echo $rows['first_name']; ?>">
+```
+
+This will ensure that the current values of the user’s first name, last name, etc., are pre-filled in the form.
+
+### 5. **Dynamic Country and State Select Boxes**
+
+Lastly, the country and state select boxes are populated dynamically through JavaScript:
+
+```javascript
+fetch('http://localhost/php/views/crud/editUser.php?action=getCountries')
+    .then(response => response.json())
+    .then(countries => {
+        countries.forEach(country => {
+            const option = document.createElement('option');
+            option.value = country.id;
+            option.textContent = country.name;
+
+            if (country.id === selectedCountry) {
+                option.selected = true;
+            }
+            countrySelect.appendChild(option);
+        });
+        if (selectedCountry) {
+            fetchStates(selectedCountry, selectedState);
+        }
+    })
+    .catch(error => console.error('Error fetching countries:', error));
+```
+
+Here:
+- The countries are fetched from the server using a `GET` request (`action=getCountries`).
+- Each country is added as an `<option>` element in the country select box. The `selected` attribute is set for the pre-selected country.
+- Similarly, states are dynamically fetched based on the selected country.
+
+### Recap:
+- **Form Validation:** We validate the user’s input (text fields, phone number, email, etc.) and ensure the uploaded file meets certain criteria (type and size).
+- **File Upload:** If the file is valid, it’s moved to a specific folder, and the path is saved in the database.
+- **Database Update:** We update the user’s details, including the file path for the profile photo, in the database.
+- **Redirect and Feedback:** After successfully updating, we redirect the user and show a success message.
 
 
+To achieve what you're asking for (displaying the default image when no profile image is uploaded, and showing the uploaded image after editing), here's how you can go about it:
 
+### Steps to Implement:
+1. **Store the Default Image**: The default image should be placed in the `storage` folder (or wherever you'd like) so it can be accessed publicly by the browser.
 
+2. **Check for Profile Image**: When displaying the profile image on the dashboard, check if a user has uploaded one. If not, display the default image.
 
+### Step 1: Store the Default Image
 
+- Place the default image (`default.jpg`) inside the `storage` folder. For example:
+    - **Path**: `storage/default.jpg`
 
+### Step 2: Update the Dashboard Code
 
+In the code where you display the profile image in the dashboard, use the logic to check whether the user has uploaded an image. If not, use the default image.
 
-Sure! Here's an example of how the data might look in your `users` table, specifically in the `profile_photo` and `file_path` columns.
+Here’s how you can modify your `dashboard.php`:
 
-### Example Database Structure:
-
-#### `users` Table:
-
-| id  | first_name | last_name | email              | phone_no   | address     | country   | state | pincode | password      | profile_photo | file_path                   |
-|-----|------------|-----------|--------------------|------------|-------------|-----------|-------|---------|---------------|---------------|-----------------------------|
-| 1   | John       | Doe       | john@example.com   | 1234567890 | 123 Street  | India     | Delhi | 110001  | hashedpassword| john.jpg      | /storage/john.jpg            |
-| 2   | Alice      | Smith     | alice@example.com  | 9876543210 | 456 Avenue | United States | NY   | 10001   | hashedpassword| default.jpg   | /storage/default.jpg         |
-| 3   | Bob        | Brown     | bob@example.com    | 1122334455 | 789 Road    | Canada    | Ontario | 12345   | hashedpassword| default.jpg   | /storage/default.jpg         |
+```php
+<td>
+    <?php 
+    // If the user doesn't have a file path or the file path is empty, use the default image.
+    $imagePath = !empty($rows['file_path']) ? $rows['file_path'] : './storage/default.jpg'; 
+    ?>
+    <img src="<?= $imagePath ?>" alt="Profile Image" width="50" height="50">
+</td>
+```
 
 ### Explanation:
+- **Condition Check**: We're checking if the `file_path` exists and is not empty. If the user has uploaded an image, we'll use the path stored in the database (`$rows['file_path']`). If no image is uploaded (i.e., `file_path` is empty), it will fallback to the default image `default.jpg`.
+- **Relative Path**: Ensure that `default.jpg` is correctly referenced relative to the `dashboard.php` file. So the path `./storage/default.jpg` assumes that the `storage` folder is at the same level as the `dashboard.php` file.
 
-- **`profile_photo`**: This column stores the file name of the uploaded photo, such as `john.jpg` or `default.jpg`. If the user uploaded a photo, the `profile_photo` column will contain the file name of the uploaded photo. If no photo is uploaded, it will contain the default photo name (`default.jpg`).
-  
-- **`file_path`**: This column stores the full path to the photo file on your server. For example, for a user who uploaded `john.jpg`, the `file_path` will be `/storage/john.jpg`. If no photo is uploaded, it will store the path to the default image, `/storage/default.jpg`.
+### Where to Save `default.jpg`:
 
-### How the `file_path` Works:
+- Place `default.jpg` inside the `storage` folder in your project directory:
+    ```
+    /your-project-root/
+        ├── storage/
+            └── default.jpg
+        ├── dashboard.php
+        ├── ...
+    ```
 
-- When a user uploads a photo, the photo is saved in the `storage` folder (or whichever folder you specify in your project).
-- The `file_path` column stores the location of the file relative to your project folder, e.g., `/storage/john.jpg`.
-- When displaying the profile photo, you can use this path to load the image.
+### Step 3: Uploading Profile Images
 
-### Example SQL Query for Inserting or Updating the Photo:
+When users upload their profile images (for example, when editing their profiles), they will be stored in the `storage/profile_images/` folder, and the relative path will be stored in the database (as you did in the previous steps).
 
-#### 1. **When User Uploads a Photo**:
+### Example:
+
+If a user uploads a profile image named `john_profile.jpg`, the `file_path` stored in the database might look like:
+- **`file_path`**: `/storage/profile_images/john_profile.jpg`
+
+Then when the dashboard loads:
+- If the user has a profile image, it will be shown.
+- If the user does not have a profile image, the default image will be displayed.
+
+### Conclusion:
+
+This will allow you to:
+- Show the default image if a user hasn't uploaded a profile image.
+- Show the uploaded profile image if one exists.
+
+
+
+
+
+
+To display the profile image that the user has uploaded, you need to access the file path stored in the database and use it to show the image in the dashboard.
+
+### Accessing and Displaying the Uploaded Image:
+
+1. **Ensure the File Path is Correct**: When the user uploads a file, the path to the file is saved in the database. This path should be relative to the folder where the files are stored (e.g., `storage/profile_images/filename.jpg`).
+
+2. **Display the Uploaded Image in Dashboard**: You can access the `file_path` from the database and display the image accordingly.
+
+### Example Workflow:
+- **User uploads an image**: The file is uploaded and saved in the `storage/profile_images/` folder (or wherever you store the images).
+- **Database**: The `file_path` for the image is stored in the database (e.g., `/storage/profile_images/john_profile.jpg`).
+- **Dashboard**: When the dashboard loads, you check the `file_path` column to see if the user has uploaded a profile image. If yes, display the image; otherwise, show the default image.
+
+### Code for Displaying the Uploaded Image in `dashboard.php`
+
+You already have a mechanism to check for the uploaded profile image using the `file_path` stored in the database. Now, you just need to ensure that you're using the correct path.
+
+Here’s the updated code snippet for displaying the profile image in the dashboard:
 
 ```php
-$sql = "UPDATE users SET profile_photo = ?, file_path = ? WHERE id = ?";
-$stmt = $connection->prepare($sql);
-$stmt->bind_param("ssi", $fileName, $filePath, $userId);
-$stmt->execute();
+<td>
+    <?php 
+    // Check if the user has a profile image
+    if (!empty($rows['file_path']) && file_exists($_SERVER['DOCUMENT_ROOT'] . $rows['file_path'])) {
+        // Display the uploaded image
+        $imagePath = $rows['file_path'];
+    } else {
+        // If the user hasn't uploaded an image, display the default image
+        $imagePath = './storage/default.jpg';
+    }
+    ?>
+    <img src="<?= $imagePath ?>" alt="Profile Image" width="50" height="50">
+</td>
 ```
 
-- **Example**: If a user uploads `john.jpg`, the `profile_photo` will be `john.jpg`, and the `file_path` will be `/storage/john.jpg`.
+### Explanation:
+1. **Check if `file_path` Exists**: We're first checking if `file_path` is not empty and whether the file exists on the server using `file_exists()`.
+   - If it exists, it means the user uploaded a file, and we use the file path from the database (`$rows['file_path']`).
+   - If the file does not exist (either because it was deleted or the user hasn't uploaded one), we fall back to the default image (`default.jpg`).
+   
+2. **Document Root**: `$_SERVER['DOCUMENT_ROOT']` gives the root directory of the web server. We're using this to make sure the file path is absolute, ensuring that the server can locate the file correctly.
 
-#### 2. **When User Does Not Upload a Photo**:
+3. **Image Display**: If the uploaded image exists, it will be displayed. If not, the default image (`default.jpg`) will be displayed.
 
-If no file is uploaded by the user, you can set the `profile_photo` and `file_path` to the default values:
+### Example File Structure:
 
-```php
-$defaultPhoto = 'default.jpg';  // Default photo file name
-$defaultPath = '/storage/default.jpg';  // Default photo file path
+- **Uploaded images**: `/storage/profile_images/john_profile.jpg`
+- **Default image**: `/storage/default.jpg`
+- **Dashboard code**: The PHP code will look for `file_path` in the database, which could be something like `/storage/profile_images/john_profile.jpg`.
 
-$sql = "UPDATE users SET profile_photo = ?, file_path = ? WHERE id = ?";
-$stmt = $connection->prepare($sql);
-$stmt->bind_param("ssi", $defaultPhoto, $defaultPath, $userId);
-$stmt->execute();
-```
+### Important Notes:
+- Make sure that the path stored in the database (`file_path`) is relative to the web root.
+- The image files should be accessible by the web server, meaning the permissions of the image files and the `storage` folder should be set appropriately to allow public access.
 
-- **Example**: If no photo is uploaded, the `profile_photo` will be `default.jpg`, and the `file_path` will be `/storage/default.jpg`.
+By following this logic, you will be able to show the uploaded image if it exists or fall back to a default image if the user hasn't uploaded one.
 
-### Final Thoughts:
 
-- The **`profile_photo`** column is used to store the file name of the image.
-- The **`file_path`** column is used to store the complete path where the image is stored on the server.
-- If no photo is uploaded, the default image will be used for both fields (`profile_photo` = `default.jpg` and `file_path` = `/storage/default.jpg`).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<?php
+include '../../config/dataBaseConnect.php'; // Correct path for database connection
+include '../formValidation.php'; // Ensure this path is correct
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+
+    $errors = validateForm($_POST);
+
+    // File Upload Validation
+    if ($_FILES['profilePhoto']['error'] == 0) {
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+        $fileSizeLimit = 5000000; // 5MB
+        $fileType = $_FILES['profilePhoto']['type'];
+        $fileSize = $_FILES['profilePhoto']['size'];
+
+        if (!in_array($fileType, $allowedTypes)) {
+            $errors['profilePhoto'] = "Invalid file type. Only JPEG, PNG, and GIF are allowed.";
+        }
+
+        if ($fileSize > $fileSizeLimit) {
+            $errors['profilePhoto'] = "File size exceeds 5MB limit.";
+        }
+    }
+
+    if (empty($errors)) {
+        $id = $_POST['id'];
+        $firstName = $_POST['firstName'];
+        $lastName = $_POST['lastName'];
+        $email = $_POST['email'];
+        $phoneNo = $_POST['phone'];
+        $address = $_POST['address'];
+        $country = $_POST['country'];
+        $state = $_POST['state'];
+        $pincode = $_POST['pincode'];
+        $password = $_POST['password'];
+
+        $options = ["cost" => 10];
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT, $options);
+
+        $uploadDir = realpath(__DIR__ . '/../../storage/profile_images/') . '/';
+        $defaultPhoto = '/storage/default.jpg';
+        $filePath = $defaultPhoto;
+
+        if ($_FILES['profilePhoto']['error'] == 0) {
+            $fileName = uniqid() . "_" . basename($_FILES['profilePhoto']['name']);
+            $fileDestination = $uploadDir . $fileName;
+
+            if (move_uploaded_file($_FILES['profilePhoto']['tmp_name'], $fileDestination)) {
+                $filePath = '/storage/profile_images/' . $fileName;
+            }
+        }
+
+        $sql = "UPDATE `users` SET 
+                `first_name` = '$firstName',
+                `last_name` = '$lastName',
+                `email` = '$email',
+                `phone_no` = '$phoneNo',
+                `address` = '$address',
+                `country` = '$country',
+                `state` = '$state',
+                `file_path` = '$filePath'
+            WHERE `id` = '$id'";
+
+        if ($connection->query($sql)) {
+            session_start();
+            $_SESSION["edit_message"] = "Record Updated Successfully!";
+            header("Location: ../dashboard.php");
+            exit;
+        } else {
+            echo "Error updating data: " . $connection->error;
+        }
+    }
+}
+
+$id = $_GET['id'] ?? null;
+if ($id) {
+    $query = "SELECT * FROM `users` WHERE id = $id";
+    $result = $connection->query($query);
+    $user = $result->fetch_assoc();
+} else {
+    echo "Invalid User ID";
+    exit;
+}
+
+if (isset($_GET['action']) && $_GET['action'] === 'getCountries') {
+    $query = "SELECT id , name FROM countries";
+    $result = $connection->query($query);
+    $countries = [];
+    while ($row = $result->fetch_assoc()) {
+        $countries[] = $row;
+    }
+    echo json_encode($countries);
+    exit;
+}
+
+if (isset($_GET['action']) && $_GET['action'] === 'getStates' && isset($_GET['country_id'])) {
+    $countryId = $_GET['country_id'];
+    $query = "SELECT id, name FROM states WHERE country_id = $countryId";
+    $result = $connection->query($query);
+
+    $states = [];
+    while ($row = $result->fetch_assoc()) {
+        $states[] = $row;
+    }
+
+    echo json_encode($states);
+    exit;
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/dashboardStyle.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css"
+        integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <title>Edit User</title>
+</head>
+
+<body>
+    <?php include '../../layout/navbar.php'; ?>
+
+    <?php
+    if ($user) {
+    ?>
+        <div class="container">
+            <h1>Edit User Details</h1>
+            <form method="post" action="editUser.php?id=<?php echo $id; ?>" enctype="multipart/form-data">
+                <div class="form_group">
+                    <label for="firstName">Profile Photo :</label>
+                    <input type="file" id="profilePhoto" name="profilePhoto">
+                </div>
+                <div class="form_group">
+                    <label for="firstName">First name:</label>
+                    <input type="text" id="firstName" name="firstName"
+                        value="<?php echo $user['first_name']; ?>">
+                    <span class="error"><?php echo $errors['firstName'] ?? ''; ?></span>
+                </div>
+                <div class="form_group">
+                    <label for="lastName">Last name:</label>
+                    <input type="text" id="lastName" name="lastName"
+                        value="<?php echo $user['last_name']; ?>">
+                    <span class="error"><?php echo $errors['lastName'] ?? ''; ?></span>
+                </div>
+                <div class="form_group">
+                    <label for="email">Email :</label>
+                    <input type="text" id="email" name="email"
+                        value="<?php echo $user['email']; ?>">
+                    <span class="error"><?php echo $errors['email'] ?? ''; ?></span>
+                </div>
+                <div class="form_group">
+                    <label for="phone">Phone No. :</label>
+                    <input type="text" id="phone" name="phone"
+                        value="<?php echo $user['phone_no']; ?>">
+                    <span class="error"><?php echo $errors['phone'] ?? ''; ?></span>
+                </div>
+                <div class="form_group">
+                    <label for="address">Address :</label>
+                    <textarea name="address" id="address"><?php echo $user['address']; ?></textarea>
+                    <span class="error"><?php echo $errors['address'] ?? ''; ?></span>
+                </div>
+                <div class="form_group">
+                    <label for="country">Country :</label>
+                    <select name="country" id="country">
+                        <option value=""><?php echo $user['country']; ?></option>
+                    </select>
+                    <span class="error"><?php echo $errors['country'] ?? ''; ?></span>
+                </div>
+                <div class="form_group">
+                    <label for="state">State :</label>
+                    <select name="state" id="state">
+                        <option value=""><?php echo $user['state']; ?></option>
+                    </select>
+                    <span class="error"><?php echo $errors['state'] ?? ''; ?></span>
+                </div>
+                <div class="form_group">
+                    <label for="pincode">Pincode :</label>
+                    <input type="text" name="pincode" id="pincode"
+                        value="<?php echo $user['pincode']; ?>">
+                    <span class="error"><?php echo $errors['pincode'] ?? ''; ?></span>
+                </div>
+                <div class="form_group">
+                    <label for="password">Password :</label>
+                    <input type="password" id="password" name="password">
+                    <span class="error"><?php echo $errors['password'] ?? ''; ?></span>
+                </div>
+                <input type="text" name="id" style="visibility: hidden;" value="<?php echo $id ?>">
+                <div class="form_group">
+                    <button type="submit">Edit User</button>
+                </div>
+            </form>
+        </div>
+    <?php } ?>
+</body>
+
+</html>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const countrySelect = document.getElementById('country');
+        const stateSelect = document.getElementById('state');
+        const selectedCountry = '<?= $user['country'] ?? '' ?>';
+        const selectedState = '<?= $user['state'] ?? '' ?>';
+        fetch('http://localhost/php/views/crud/editUser.php?action=getCountries')
+            .then(response => response.json())
+            .then(countries => {
+                countries.forEach(country => {
+                    const option = document.createElement('option');
+                    option.value = country.id;
+                    option.textContent = country.name;
+
+                    if (country.id === selectedCountry) {
+                        option.selected = true;
+                    }
+                    countrySelect.appendChild(option);
+                });
+                if (selectedCountry) {
+                    fetchStates(selectedCountry, selectedState);
+                }
+            })
+            .catch(error => console.error('Error fetching countries:', error));
+
+        countrySelect.addEventListener('change', function () {
+            const countryId = this.value;
+            stateSelect.innerHTML = '<option value="">Select State</option>';
+
+            if (countryId) {
+                fetchStates(countryId);
+            }
+        });
+
+        function fetchStates(countryId, preselectedState = '') {
+            fetch(`http://localhost/php/views/crud/editUser.php?action=getStates&country_id=${countryId}`)
+                .then(response => response.json())
+                .then(states => {
+                    states.forEach(state => {
+                        const option = document.createElement('option');
+                        option.value = state.name;
+                        option.textContent = state.name;
+                        if (state.name === preselectedState) {
+                            option.selected = true;
+                        }
+                        stateSelect.appendChild(option);
+                    });
+                })
+                .catch(error => console.error('Error fetching states:', error));
+        }
+    });
+</script>

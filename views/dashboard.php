@@ -40,16 +40,16 @@ $stateFilter = $paginationData['stateFilter'];
     <!-- Success Messages -->
     <div>
         <?php
-        if (isset($_SESSION["edit_message"])) {
-            echo '<div class="alert alert-success">Record Updated Successfully!</div>';
-            unset($_SESSION["edit_message"]);
-        } elseif (isset($_SESSION["delete_message"])) {
-            echo '<div class="alert alert-success">Record Deleted Successfully!</div>';
-            unset($_SESSION["delete_message"]);
-        } elseif (isset($_SESSION["add_message"])) {
-            echo '<div class="alert alert-success">User Added Successfully!</div>';
-            unset($_SESSION["add_message"]);
-        }
+        // if (isset($_SESSION["edit_message"])) {
+        //     echo '<div class="alert alert-success">Record Updated Successfully!</div>';
+        //     unset($_SESSION["edit_message"]);
+        // } elseif (isset($_SESSION["delete_message"])) {
+        //     echo '<div class="alert alert-success">Record Deleted Successfully!</div>';
+        //     unset($_SESSION["delete_message"]);
+        // } elseif (isset($_SESSION["add_message"])) {
+        //     echo '<div class="alert alert-success">User Added Successfully!</div>';
+        //     unset($_SESSION["add_message"]);
+        // }
         ?>
     </div>
 
@@ -105,6 +105,7 @@ $stateFilter = $paginationData['stateFilter'];
                             <i class="fas fa-sort sort-icon <?= $sortColumn === 'id' ? ($sortOrder === 'ASC' ? 'fa-sort-up active' : 'fa-sort-down active') : '' ?>"></i>
                         </a>
                     </th>
+                    <th>profilePhoto</th>
                     <th>
                         <a href="?sortColumn=first_name&sortOrder=<?= $sortOrder === 'ASC' ? 'DESC' : 'ASC'; ?>">
                             First Name
@@ -138,6 +139,11 @@ $stateFilter = $paginationData['stateFilter'];
                 ?>
                         <tr>
                             <td><?= $rows['id'] ?></td>
+                            <td>
+                                <?php $imagePath = $rows['file_path'] ?? './storage/default.jpg'; ?>
+                                <img src="<?= $imagePath ?>" alt="Profile Image" width="50" height="50">
+                            </td>
+
                             <td><?= $rows['first_name'] ?></td>
                             <td><?= $rows['last_name'] ?></td>
                             <td><?= $rows['email'] ?></td>
@@ -147,8 +153,8 @@ $stateFilter = $paginationData['stateFilter'];
                             <td><?= $rows['state'] ?></td>
                             <td><?= $rows['pincode'] ?></td>
                             <td>
-                                <a href="./editUser.php?id=<?= $rows['id'] ?>"><button type="button" class="btn btn-outline-warning">Edit</button></a>
-                                <a href="./deleteUser.php?id=<?= $rows['id'] ?>"><button type="button" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to delete this record?')">Delete</button></a>
+                                <a href="./crud/editUser.php?id=<?php echo $rows['id']; ?>"><button type="button" class="btn btn-outline-warning">Edit</button></a>
+                                <a href="./crud/deleteUser.php $rows['id'] ?>"><button type="button" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to delete this record?')">Delete</button></a>
                             </td>
                         </tr>
                 <?php

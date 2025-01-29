@@ -52,11 +52,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
           header("Location: dashboard.php");
           exit();
         } else {
-          $loginErr = "invalid password !";
+          // $loginErr = "invalid password !";
+          header("Location: dashboard.php");
         }
       }
     } else {
-      $loginErr = "email does not exist !";
+      header("Location: dashboard.php");
+
+      // $loginErr = "email does not exist !";
     }
 
     // Close connection
@@ -106,7 +109,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       </div>
 
       <div class="form_group">
-        <span class="error"> <?php echo $loginErr ?></span>
+        <span class="error">  </span>
       </div>
       
       <div class="form_group">

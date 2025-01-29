@@ -1,8 +1,5 @@
 
 <?php
-
-header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json");
 include '../config/dataBaseConnect.php';
 include './formValidation.php';
 
@@ -17,7 +14,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $phoneNo = $_POST['phone'];
         $address = $_POST['address'];
         $country = $_POST['country'];
-        $state = $_POST['states'];
+        $state = $_POST['state'];
         $pincode = $_POST['pincode'];
         $password = $_POST['password'];
 
@@ -31,7 +28,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             '4' =>  'japan',
          ];
 
-        $sql = "INSERT INTO `users` (`first_name` ,`last_name`, `email`, `phone_no`, `address` , `country`, `state` , `pincode`, `password`) VALUES ('$firstName' ,'$lastName', '$email', '$phoneNo', '$address', '$countryList[$country]', '$state' , '$pincode', '$hashedPassword')";
+        $sql = "INSERT INTO `users` (`first_name` ,`last_name`, `email`, `phone_no`, `address` , `country`, `state` , `pincode`, `password` , `file_path`) VALUES ('$firstName' ,'$lastName', '$email', '$phoneNo', '$address', '$countryList[$country]', '$state' , '$pincode', '$hashedPassword' , '')";
 
         if ($connection->query($sql)) {
             header("Location: login.php");
@@ -45,31 +42,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 }
 
 if (isset($_GET['action']) && $_GET['action'] === 'getCountries') {
-    header("Access-Control-Allow-Origin: *");
-    header("Content-Type: application/json");
-
     $query = "SELECT id , name FROM countries";
     $result = $connection->query($query);
-
-    if (!$result) {
-        echo json_encode(["error" => "Database query failed: " . $connection->error]);
-        exit;
-    }
-
     $countries = [];
     while ($row = $result->fetch_assoc()) {
         $countries[] = $row;
     }
-
     echo json_encode($countries);
     exit;
 }
 
-
 if (isset($_GET['action']) && $_GET['action'] === 'getStates' && isset($_GET['country_id'])) {
-    header("Access-Control-Allow-Origin: *");
-    header("Content-Type: application/json");
-
     $countryId = $_GET['country_id'];
     $query = "SELECT id, name FROM states WHERE country_id = $countryId";
     $result = $connection->query($query);
@@ -145,7 +128,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'getStates' && isset($_GET['co
                 </span>
             </div>
 
-            <div class="form_group">
+            <!-- <div class="form_group">
                 <label for="country">Country :</label>
                 <select name="country" id="country" value="">
                     <option value="">Select Country</option>
@@ -163,7 +146,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'getStates' && isset($_GET['co
                 <span class="error">
                     <?php echo $errors['state'] ?? ''; ?>
                 </span>
-            </div>
+            </div> -->
 
             <div class="form_group">
                 <label for="pincode">Pincode :</label>
@@ -203,7 +186,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'getStates' && isset($_GET['co
 </body>
 
 </html> 
-<script>
+<!-- <script>
     document.addEventListener('DOMContentLoaded', function() {
         const countrySelect = document.getElementById('country');
         const stateSelect = document.getElementById('state');
@@ -245,7 +228,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'getStates' && isset($_GET['co
                         const option = document.createElement('option');
                         option.value = state.name;
                         option.textContent = state.name;
-                        if (state.id === preselectedState) {
+                        if (state.name === preselectedState) {
                             option.selected = true;
                         }
                         stateSelect.appendChild(option);
@@ -254,4 +237,4 @@ if (isset($_GET['action']) && $_GET['action'] === 'getStates' && isset($_GET['co
                 .catch(error => console.error('Error fetching states:', error));
         }
     });
-</script>
+</script> -->
