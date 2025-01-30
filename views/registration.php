@@ -1,6 +1,5 @@
-
 <?php
-include '../config/dataBaseConnect.php';
+include './config/dataBaseConnect.php';
 include './formValidation.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {

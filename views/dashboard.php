@@ -3,11 +3,11 @@ include '../config/dataBaseConnect.php';
 include './crud/pagination.php';
 
 session_start();
-if (!isset($_SESSION['email']) && !isset($_SESSION['password'])) {
-    echo "<script> alert('Please login first') </script>";
-    header("Location: login.php");
-    exit;
-}
+// if (!isset($_SESSION['email']) && !isset($_SESSION['password'])) {
+//     // echo "<script> alert('Please login first') </script>";
+//     // header("Location: login.php");
+//     exit;
+
 
 $paginationData = listUser($connection);
 $result = $paginationData['result'];
@@ -149,8 +149,8 @@ $stateFilter = $paginationData['stateFilter'];
                             <td><?= $rows['email'] ?></td>
                             <td><?= $rows['phone_no'] ?></td>
                             <td><?= $rows['address'] ?></td>
-                            <td><?= $rows['country'] ?></td>
-                            <td><?= $rows['state'] ?></td>
+                            <td><?= $rows['country_name'] ?></td>
+                            <td><?= $rows['state_name'] ?></td>
                             <td><?= $rows['pincode'] ?></td>
                             <td>
                                 <a href="./crud/editUser.php?id=<?php echo $rows['id']; ?>"><button type="button" class="btn btn-outline-warning">Edit</button></a>

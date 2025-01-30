@@ -3,8 +3,8 @@
 include '../config/dataBaseConnect.php';
 
 // validations 
-$emailErr = $passwordErr = "";
-$email = $password = "";
+$emailErr = "";
+// $email = $password = "";
 
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -17,11 +17,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
   }
 
-  if (empty($_POST["password"])) {
-    $passwordErr = "Password is required";
-  } else {
-    $password = test_input($_POST["password"]);
-  }
+  // if (empty($_POST["password"])) {
+  //   $passwordErr = "Password is required";
+  // } else {
+  //   $password = test_input($_POST["password"]);
+  // }
 }
 function test_input($data)
 {
@@ -32,35 +32,19 @@ session_start();
 
 // verify user from database
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-  if ($emailErr == "" && $passwordErr == "" && !empty($_POST["email"]) && !empty($_POST["password"])) {
+  if ($emailErr == "" && !empty($_POST["email"]) ) {
 
     // Database User Verification 
     $email = $_POST['email'];
-    $password = $_POST['password'];
+    // $password = $_POST['password'];
 
     $sql = "SELECT * FROM users WHERE email = '$email'";
     $result = $connection->query($sql);
 
-    if ($result->num_rows == 1) {
-      while ($row = $result->fetch_assoc()) {
-        if (password_verify($password, $row['password'])) {
-          $_SESSION['email'] = $email;
-          $_SESSION['password'] = $password;
-          echo isset($_SESSION['email']);
-          echo "done";
-          echo '<script>alert("Logged in Successfully")</script>';
-          header("Location: dashboard.php");
-          exit();
-        } else {
-          // $loginErr = "invalid password !";
-          header("Location: dashboard.php");
-        }
-      }
-    } else {
-      header("Location: dashboard.php");
-
-      // $loginErr = "email does not exist !";
-    }
+   
+      header("Location: ../dashboard.php");
+// include './dashboard.php'  
+   
 
     // Close connection
     $connection->close();
@@ -96,13 +80,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
           <?php echo $emailErr; ?>
         </span>
       </div>
-
+<!-- 
       <div class="form_group">
         <label for="password">Password :</label>
         <input type="password" id="password" name="password"><span class="error">
-          <?php echo $passwordErr; ?>
+          
         </span>
-      </div>
+      </div> -->
 
       <div class="form_group">
         <p>don't have an account ? <a href="/registration"><span>sign up</span></a></p>

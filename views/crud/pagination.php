@@ -37,10 +37,18 @@ function listUser($connection) {
         $whereClause .= " AND state = '$stateFilter'";
     }
 
-    // Main query with filters, search, sorting, and pagination
-    $sql = "SELECT * FROM `users` WHERE $whereClause 
-            ORDER BY $sortColumn $sortOrder 
-            LIMIT $startFrom, $recordsPerPage";
+    // // Main query with filters, search, sorting, and pagination
+    // $sql = "SELECT * FROM `users` WHERE $whereClause 
+    //         ORDER BY $sortColumn $sortOrder 
+    //         LIMIT $startFrom, $recordsPerPage";
+    $sql = "SELECT u.*, c.name AS country_name, s.name AS state_name
+        FROM users u
+        LEFT JOIN countries c ON u.country_id = c.country_id
+        LEFT JOIN states s ON u.state_id = s.state_id
+        WHERE $whereClause 
+        ORDER BY $sortColumn $sortOrder 
+        LIMIT $startFrom, $recordsPerPage";
+
     $result = $connection->query($sql);
 
     if (!$result) {
@@ -48,7 +56,10 @@ function listUser($connection) {
     }
 
     // Count query for pagination
-    $countSql = "SELECT COUNT(*) AS total FROM `users` WHERE $whereClause";
+    $countSql = "SELECT COUNT(*) AS total FROM `users` u
+                 LEFT JOIN countries c ON u.country_id = c.country_id
+                 LEFT JOIN states s ON u.state_id = s.state_id
+                 WHERE $whereClause";
     $countResult = $connection->query($countSql);
 
     if (!$countResult) {
