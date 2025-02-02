@@ -1,6 +1,6 @@
 <?php
 include '../config/dataBaseConnect.php';
-include './pagination2.php';
+// include './pagination2.php';
 
 session_start();
 if (!isset($_SESSION['email']) && !isset($_SESSION['password'])) {

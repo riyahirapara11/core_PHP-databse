@@ -1,10 +1,8 @@
 <?php
-
 include '../config/dataBaseConnect.php';
 
-// validations 
-$emailErr = "";
-// $email = $password = "";
+$emailErr = $passwordErr = "";
+$email = $password = "";
 
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -32,24 +30,37 @@ session_start();
 
 // verify user from database
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-  if ($emailErr == "" && !empty($_POST["email"]) ) {
+  if ($emailErr == "" && !empty($_POST["email"])) {
 
     // Database User Verification 
     $email = $_POST['email'];
     // $password = $_POST['password'];
+    // $loginErr = '' ;
 
     $sql = "SELECT * FROM users WHERE email = '$email'";
     $result = $connection->query($sql);
 
-   
-      header("Location: ../dashboard.php");
-// include './dashboard.php'  
-   
+    if ($result->num_rows == 1) {
+      //   while ($row = $result->fetch_assoc()) {
+      //     if (password_verify($password, $row['password'])) {
+      //       $_SESSION['email'] = $email;
+      //       $_SESSION['password'] = $password;
+            echo '<script>alert("Logged in Successfully")</script>';
+            header("Location: ./dashboard.php");
+      //       exit();
+      //     } else {
+      //       $loginErr = "invalid password !";
+      //     }
+      //   }
+      // } else {
+      //   $loginErr = "email does not exist !";
+      // }
 
-    // Close connection
-    $connection->close();
-  } else {
-    echo "";
+      // Close connection
+      // $conn ection->close();
+    } else {
+      echo "";
+    }
   }
 }
 ?>
@@ -80,24 +91,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
           <?php echo $emailErr; ?>
         </span>
       </div>
-<!-- 
-      <div class="form_group">
+
+      <!-- <div class="form_group">
         <label for="password">Password :</label>
         <input type="password" id="password" name="password"><span class="error">
-          
+          <?php ?>
         </span>
       </div> -->
 
       <div class="form_group">
-        <p>don't have an account ? <a href="/registration"><span>sign up</span></a></p>
+        <span class="error"> <?php  ?></span>
+      </div>
+
+      <p><a href="../forgotPassword.php">forgot password ?</a></p>
+
+      <div class="form_group">
+     <a href="./dashboard.php"><button type="submit">Login</button></a>
       </div>
 
       <div class="form_group">
-        <span class="error">  </span>
-      </div>
-      
-      <div class="form_group">
-        <button>Login</button>
+        <p>don't have an account ? <a href="./registration.php"><span>sign up</span></a></p>
       </div>
     </form>
   </div>

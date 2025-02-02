@@ -1,14 +1,8 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const countrySelect = document.getElementById('country');
-    const stateSelect = document.getElementById('state');
-    
-    // Get selected country and state from data attributes
-    const locationData = document.getElementById('location-data');
-    const selectedCountry = locationData.getAttribute('data-country');
-    const selectedState = locationData.getAttribute('data-state');
+function initializeLocationDropdowns(countrySelectId, stateSelectId, selectedCountry = '', selectedState = '') {
+    const countrySelect = document.getElementById(countrySelectId);
+    const stateSelect = document.getElementById(stateSelectId);
 
-    // Fetch countries
-    fetch('http://localhost/core_PHP-databse/handlers.php?action=getCountries')
+    fetch('http://localhost/core_PHP-databse/views/crud/getCountryState.php?action=getCountries')
         .then(response => response.json())
         .then(countries => {
             countries.forEach(country => {
@@ -27,8 +21,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => console.error('Error fetching countries:', error));
 
-    // Fetch states when country is selected
-    countrySelect.addEventListener('change', function() {
+    countrySelect.addEventListener('change', function () {
         const countryId = this.value;
         stateSelect.innerHTML = '<option value="">Select State</option>';
         if (countryId) {
@@ -37,7 +30,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function fetchStates(countryId, preselectedState = '') {
-        fetch(`http://localhost/core_PHP-databse/handlers.php?action=getStates&country_id=${countryId}`)
+        fetch(`http://localhost/core_PHP-databse/views/crud/getCountryState.php?action=getStates&country_id=${countryId}`)
             .then(response => response.json())
             .then(states => {
                 states.forEach(state => {
@@ -52,4 +45,4 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => console.error('Error fetching states:', error));
     }
-});
+}

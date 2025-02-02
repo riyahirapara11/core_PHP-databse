@@ -2,7 +2,6 @@
 include '../config/dataBaseConnect.php';
 // include './crud/pagination.php' ;
 
-
 function listUser($connection) {
     $recordsPerPage = 5;
 
@@ -14,6 +13,8 @@ function listUser($connection) {
     $searchResult = isset($_GET['search']) ? $connection->real_escape_string($_GET['search']) : '';
     $countryFilter = isset($_GET['countryFilter']) ? $connection->real_escape_string($_GET['countryFilter']) : '';
     $stateFilter = isset($_GET['stateFilter']) ? $connection->real_escape_string($_GET['stateFilter']) : '';
+
+    // echo $_GET['countryFilter'] ;
 
     // Sorting values
     $sortColumn = isset($_GET['sortColumn']) ? $_GET['sortColumn'] : 'id';
@@ -31,20 +32,16 @@ function listUser($connection) {
         $whereClause .= " AND CONCAT(first_name, ' ', last_name, email) LIKE '%$searchResult%'";
     }
     if (!empty($countryFilter)) {
-        $whereClause .= " AND country = '$countryFilter'";
+        $whereClause .= " AND c.name LIKE '$countryFilter'";
     }
     if (!empty($stateFilter)) {
-        $whereClause .= " AND state = '$stateFilter'";
+        $whereClause .= " AND s.name LIKE '$stateFilter'";
     }
 
-    // // Main query with filters, search, sorting, and pagination
-    // $sql = "SELECT * FROM `users` WHERE $whereClause 
-    //         ORDER BY $sortColumn $sortOrder 
-    //         LIMIT $startFrom, $recordsPerPage";
-    $sql = "SELECT u.*, c.name AS country_name, s.name AS state_name
+    $sql = "SELECT u.*, c.name AS country, s.name AS state
         FROM users u
-        LEFT JOIN countries c ON u.country_id = c.country_id
-        LEFT JOIN states s ON u.state_id = s.state_id
+        LEFT JOIN countries c ON u.country_id = c.id
+        LEFT JOIN states s ON u.state_id = s.id
         WHERE $whereClause 
         ORDER BY $sortColumn $sortOrder 
         LIMIT $startFrom, $recordsPerPage";
@@ -57,8 +54,8 @@ function listUser($connection) {
 
     // Count query for pagination
     $countSql = "SELECT COUNT(*) AS total FROM `users` u
-                 LEFT JOIN countries c ON u.country_id = c.country_id
-                 LEFT JOIN states s ON u.state_id = s.state_id
+                 LEFT JOIN countries c ON u.country_id = c.id
+                 LEFT JOIN states s ON u.state_id = s.id
                  WHERE $whereClause";
     $countResult = $connection->query($countSql);
 

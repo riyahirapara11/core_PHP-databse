@@ -1,24 +1,25 @@
 <?php
 include '../config/dataBaseConnect.php';
-include './crud/pagination.php';
+// include './crud/userListing.php';
+// include './crud/listingUser.php';
+include './crud/listingUser4.php' ;
 
-session_start();
+// session_start();
 // if (!isset($_SESSION['email']) && !isset($_SESSION['password'])) {
-//     // echo "<script> alert('Please login first') </script>";
-//     // header("Location: login.php");
+//     echo "<script> alert('Please login first') </script>";
+//     header("Location: login.php");
 //     exit;
+// }
 
-
-$paginationData = listUser($connection);
-$result = $paginationData['result'];
-$totalPages = $paginationData['totalPages'];
-$searchResult = $paginationData['search'];
-$page = $paginationData['currentPage'];
-$sortColumn = $paginationData['sortColumn'];
-$sortOrder = $paginationData['sortOrder'];
-$countryFilter = $paginationData['countryFilter'];
-$stateFilter = $paginationData['stateFilter'];
-
+$listUserData = listUser($connection);
+$result = $listUserData['result'];
+$totalPages = $listUserData['totalPages'];
+$searchResult = $listUserData['search'];
+$page = $listUserData['currentPage'];
+$sortColumn = $listUserData['sortColumn'];
+$sortOrder = $listUserData['sortOrder'];
+$countryFilter = $listUserData['countryFilter'];
+$stateFilter = $listUserData['stateFilter'];
 ?>
 
 <!doctype html>
@@ -30,7 +31,6 @@ $stateFilter = $paginationData['stateFilter'];
     <title>Dashboard</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
-
     <link rel="stylesheet" href="./css/dashboardStyle.css">
 </head>
 
@@ -40,39 +40,34 @@ $stateFilter = $paginationData['stateFilter'];
     <!-- Success Messages -->
     <div>
         <?php
-        // if (isset($_SESSION["edit_message"])) {
-        //     echo '<div class="alert alert-success">Record Updated Successfully!</div>';
-        //     unset($_SESSION["edit_message"]);
-        // } elseif (isset($_SESSION["delete_message"])) {
-        //     echo '<div class="alert alert-success">Record Deleted Successfully!</div>';
-        //     unset($_SESSION["delete_message"]);
-        // } elseif (isset($_SESSION["add_message"])) {
-        //     echo '<div class="alert alert-success">User Added Successfully!</div>';
-        //     unset($_SESSION["add_message"]);
-        // }
+        if (isset($_SESSION["edit_message"])) {
+            echo '<div class="alert alert-success">Record Updated Successfully!</div>';
+            unset($_SESSION["edit_message"]);
+        } elseif (isset($_SESSION["delete_message"])) {
+            echo '<div class="alert alert-success">Record Deleted Successfully!</div>';
+            unset($_SESSION["delete_message"]);
+        } elseif (isset($_SESSION["add_message"])) {
+            echo '<div class="alert alert-success">User Added Successfully!</div>';
+            unset($_SESSION["add_message"]);
+        }
         ?>
     </div>
+    <br>
+    <a href="./crud/addUser.php"><button class="btn btn-success" style="float: right;">+ Add New</button></a>
 
-    <!-- Search & Add User -->
-    <nav class="navbar navbar-light bg-light">
-        <div class="container-fluid">
-            <form method="GET" id="search-form">
-                <input type="text" id="search-box" name="search" placeholder="Search users..." value="<?= htmlspecialchars($searchResult) ?>" />
-            </form>
-            <a href="./addUser.php"><button class="btn btn-success">+ Add New</button></a>
-        </div>
-    </nav>
-
-    <!-- Filter Form -->
-    <form action="" method="GET">
+    <!-- search and filter  -->
+    <form method="GET" id="search-filter-form">
         <div class="row">
+            <input type="text" id="search-box" name="search" placeholder="Search users..." value="<?= htmlspecialchars($searchResult) ?>" />
+            <br>
+            <br>
             <select name="countryFilter">
                 <option value="">Filter by Country</option>
                 <?php
-                $countries = $connection->query("SELECT DISTINCT country FROM `users`");
+                $countries = $connection->query("SELECT id, name FROM countries");
                 while ($row = $countries->fetch_assoc()) {
-                    $selected = $countryFilter == $row['country'] ? 'selected' : '';
-                    echo "<option value='{$row['country']}' $selected>{$row['country']}</option>";
+                    $selected = $countryFilter == $row['name'] ? 'selected' : '';
+                    echo "<option value='{$row['name']}' $selected>{$row['name']}</option>";
                 }
                 ?>
             </select>
@@ -80,20 +75,23 @@ $stateFilter = $paginationData['stateFilter'];
             <select name="stateFilter">
                 <option value="">Filter by State</option>
                 <?php
-                $states = $connection->query("SELECT DISTINCT state FROM `users`");
+                $states = $connection->query("SELECT id, name FROM states");
                 while ($row = $states->fetch_assoc()) {
-                    $selected = $stateFilter == $row['state'] ? 'selected' : '';
-                    echo "<option value='{$row['state']}' $selected>{$row['state']}</option>";
+                    $selected = $stateFilter == $row['name'] ? 'selected' : '';
+                    echo "<option value='{$row['name']}' $selected>{$row['name']}</option>";
                 }
                 ?>
             </select>
 
             <div class="col-md-3">
-                <button type="submit" class="btn btn-primary">Apply Filter</button>
+                <!-- Submit button for search and filters -->
+                <button type="submit" class="btn btn-primary">Apply</button>
                 <a href="dashboard.php" class="btn btn-secondary">Reset</a>
             </div>
         </div>
     </form>
+
+
     <!-- Table -->
     <div>
         <table>
@@ -105,7 +103,7 @@ $stateFilter = $paginationData['stateFilter'];
                             <i class="fas fa-sort sort-icon <?= $sortColumn === 'id' ? ($sortOrder === 'ASC' ? 'fa-sort-up active' : 'fa-sort-down active') : '' ?>"></i>
                         </a>
                     </th>
-                    <th>profilePhoto</th>
+                    <th>Profile Photo</th>
                     <th>
                         <a href="?sortColumn=first_name&sortOrder=<?= $sortOrder === 'ASC' ? 'DESC' : 'ASC'; ?>">
                             First Name
@@ -129,6 +127,7 @@ $stateFilter = $paginationData['stateFilter'];
                     <th>Country</th>
                     <th>State</th>
                     <th>Pincode</th>
+                    <th>File Path</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -139,22 +138,27 @@ $stateFilter = $paginationData['stateFilter'];
                 ?>
                         <tr>
                             <td><?= $rows['id'] ?></td>
-                            <td>
-                                <?php $imagePath = $rows['file_path'] ?? './storage/default.jpg'; ?>
+                            <td> <?php
+                                    if (!empty($rows['file_path'])) {
+                                        $imagePath = '..' . $rows['file_path'];
+                                    } else {
+                                        $imagePath = '../storage/default.jpg';
+                                    }
+                                    ?>
                                 <img src="<?= $imagePath ?>" alt="Profile Image" width="50" height="50">
                             </td>
-
                             <td><?= $rows['first_name'] ?></td>
                             <td><?= $rows['last_name'] ?></td>
                             <td><?= $rows['email'] ?></td>
                             <td><?= $rows['phone_no'] ?></td>
                             <td><?= $rows['address'] ?></td>
-                            <td><?= $rows['country_name'] ?></td>
-                            <td><?= $rows['state_name'] ?></td>
+                            <td><?= $rows['country'] ?></td>
+                            <td><?= $rows['state'] ?></td>
                             <td><?= $rows['pincode'] ?></td>
+                            <td><?= $rows['file_path'] ?></td>
                             <td>
-                                <a href="./crud/editUser.php?id=<?php echo $rows['id']; ?>"><button type="button" class="btn btn-outline-warning">Edit</button></a>
-                                <a href="./crud/deleteUser.php $rows['id'] ?>"><button type="button" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to delete this record?')">Delete</button></a>
+                                <a href="./crud/editUser2.php?id=<?= $rows['id'] ?>"><button type="button" class="btn btn-outline-warning">Edit</button></a>
+                                <a href="./crud/deleteUser.php?id=<?= $rows['id'] ?>"><button type="button" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to delete this record?')">Delete</button></a>
                             </td>
                         </tr>
                 <?php
@@ -198,7 +202,7 @@ $stateFilter = $paginationData['stateFilter'];
         });
 
         searchBox.addEventListener("input", function() {
-            document.getElementById("search-form").submit();
+            document.getElementById("search-filter-form").submit();
         });
     </script>
 
