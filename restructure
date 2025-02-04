@@ -1,0 +1,205 @@
+I understand that you want to restructure and optimize your PHP project by separating the backend logic from the frontend UI, organizing your SQL queries, and managing sessions more effectively. However, as a text-based AI, I cannot directly access your files or create zip files for download. Instead, I can guide you through the restructuring process and provide you with a suggested folder structure and code snippets.
+
+### Suggested Folder Structure
+
+Here’s a proposed folder structure for your project:
+
+```
+/project
+    /config
+        database.php
+        session.php
+    /controllers
+        UserController.php
+    /models
+        User.php
+        Role.php
+        Permission.php
+    /views
+        /users
+            addUser .php
+            editUser .php
+            registration.php
+            login.php
+            dashboard.php
+    /sql
+        queries.php
+    /middleware
+        authMiddleware.php
+    /helpers
+        AuthHelper.php
+    /css
+        style.css
+    /js
+        script.js
+    index.php
+```
+
+### 1. Database Connection (config/database.php)
+
+```php
+<?php
+$host = 'localhost';
+$db = 'your_database';
+$user = 'your_user';
+$pass = 'your_password';
+
+$connection = new mysqli($host, $user, $pass, $db);
+
+if ($connection->connect_error) {
+    die("Connection failed: " . $connection->connect_error);
+}
+?>
+```
+
+### 2. Session Management (config/session.php)
+
+```php
+<?php
+session_start();
+
+function isLoggedIn() {
+    return isset($_SESSION['user_id']);
+}
+
+function logout() {
+    session_destroy();
+    header("Location: login.php");
+    exit();
+}
+?>
+```
+
+### 3. SQL Queries (sql/queries.php)
+
+```php
+<?php
+function getUser ById($id, $connection) {
+    $stmt = $connection->prepare("SELECT * FROM users WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_assoc();
+}
+
+function createUser ($username, $password, $roleId, $connection) {
+    $stmt = $connection->prepare("INSERT INTO users (username, password, role_id) VALUES (?, ? , ?)");
+    $stmt->bind_param("ssi", $username, password_hash($password, PASSWORD_DEFAULT), $roleId);
+    return $stmt->execute();
+}
+
+// Add more SQL functions as needed
+?>
+```
+
+### 4. User Controller (controllers/UserController.php)
+
+```php
+<?php
+include '../config/database.php';
+include '../sql/queries.php';
+
+function registerUser ($username, $password, $roleId) {
+    global $connection;
+    return createUser ($username, $password, $roleId, $connection);
+}
+
+function getUser ($id) {
+    global $connection;
+    return getUser ById($id, $connection);
+}
+
+// Add more user-related functions as needed
+?>
+```
+
+### 5. Auth Middleware (middleware/authMiddleware.php)
+
+```php
+<?php
+include '../config/session.php';
+
+function authMiddleware($requiredRole) {
+    if (!isLoggedIn()) {
+        header("Location: login.php");
+        exit();
+    }
+
+    // Check user role logic here
+}
+?>
+```
+
+### 6. Views (views/users/registration.php)
+
+```php
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Registration Form</h1>
+        <form method="post" action="../../index.php?action=register">
+            <div class="form_group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form_group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div class="form_group">
+                <button type="submit">Register</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
+```
+
+### 7. Main Entry Point (index.php)
+
+```php
+<?php
+include 'config/session.php';
+include 'controllers/UserController.php';
+
+$action = $_GET['action'] ?? '';
+
+switch ($action) {
+    case 'register':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $username = $_POST['username'];
+            $password = $_POST['password'];
+            registerUser ($username, $password, 2); // Assuming role_id 2 is User
+            header("Location: views/users/login.php");
+        }
+        break;
+
+    case 'login':
+        // Handle login logic
+        break;
+
+    case 'logout':
+        logout();
+        break;
+
+    default:
+        include 'views/users/login.php'; // Default view
+        break;
+}
+?>
+```
+
+### 8. Best Practices
+- **Separation of Concerns**: Each part of the application has its own responsibility (e.g., controllers handle logic, views handle presentation).
+- **Code Reusability**: Common functions are placed in separate files for reuse.
+- **Prepared Statements**: Use prepared statements to prevent SQL injection.
+- **Session Management**: Centralized session management for better control.
+
+### Conclusion
+This restructuring will help you maintain a clean and organized codebase. You can expand upon this structure as needed. If you have any specific questions or need further assistance, feel free to ask!
