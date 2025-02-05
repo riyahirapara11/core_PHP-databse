@@ -157,7 +157,7 @@ $stateFilter = $listUserData['stateFilter'];
                             <td><?= $rows['pincode'] ?></td>
                             <td><?= $rows['file_path'] ?></td>
                             <td>
-                                <a href="./crud/editUser2.php?id=<?= $rows['id'] ?>"><button type="button" class="btn btn-outline-warning">Edit</button></a>
+                                <a href="./crud/editUser.php?id=<?= $rows['id'] ?>"><button type="button" class="btn btn-outline-warning">Edit</button></a>
                                 <a href="./crud/deleteUser.php?id=<?= $rows['id'] ?>"><button type="button" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to delete this record?')">Delete</button></a>
                             </td>
                         </tr>

@@ -1,4 +1,4 @@
-function initializeLocationDropdowns(countrySelectId, stateSelectId, selectedCountry = '', selectedState = '') {
+function initializeLocationDropdowns(countryId, stateId, selectedCountry = '', selectedState = '') {
     const countrySelect = document.getElementById(countrySelectId);
     const stateSelect = document.getElementById(stateSelectId);
 
@@ -14,6 +14,7 @@ function initializeLocationDropdowns(countrySelectId, stateSelectId, selectedCou
                 }
                 countrySelect.appendChild(option);
             });
+            console.log("dynamicCountryState.js loaded!");
 
             if (selectedCountry) {
                 fetchStates(selectedCountry, selectedState);
