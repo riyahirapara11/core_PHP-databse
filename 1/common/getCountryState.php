@@ -12,9 +12,22 @@ if (isset($_GET['action']) && $_GET['action'] === 'getCountries') {
     exit;
 }
 
+// if (isset($_GET['action']) && $_GET['action'] === 'getStates' && isset($_GET['country_id'])) {
+//     $countryId = $_GET['country_id'];
+//     $query = "SELECT id, name FROM states WHERE country_id = $countryId";
+//     $result = $connection->query($query);
+//     $states = [];
+//     while ($row = $result->fetch_assoc()) {
+//         $states[] = $row;
+//     }
+//     echo json_encode($states);
+//     exit;
+// }
+
+
 if (isset($_GET['action']) && $_GET['action'] === 'getStates' && isset($_GET['country_id'])) {
-    $countryId = $_GET['country_id'];
-    $query = "SELECT id, name FROM states WHERE country_id = $countryId";
+    $countryId = intval($_GET['country_id']); // Ensure it's an integer for security
+    $query = "SELECT id, name FROM states WHERE country_id = 1";
     $result = $connection->query($query);
     $states = [];
     while ($row = $result->fetch_assoc()) {
@@ -23,3 +36,4 @@ if (isset($_GET['action']) && $_GET['action'] === 'getStates' && isset($_GET['co
     echo json_encode($states);
     exit;
 }
+

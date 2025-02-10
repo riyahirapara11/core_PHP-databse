@@ -21,15 +21,15 @@ function crudSuccessMessages()
     }
 }
 
-function passwordUpdateAndLoginFirstMessages()
-{
-    if (isset($_REQUEST['success']) == 'resetPassword') {
-        echo "<div class='alert alert-success'>Password Updated Successfully !</div>";
-    }
-    if (isset($_REQUEST['accessMsg'])) {
-        echo "<div class='alert alert-danger'>Please Do Login First !</div>";
-    }
-}
+// function passwordUpdateAndLoginFirstMessages()
+// {
+//     if (isset($_REQUEST['success']) == 'resetPassword') {
+//         echo "<div class='alert alert-success'>Password Updated Successfully !</div>";
+//     }
+//     if (isset($_REQUEST['accessMsg'])) {
+//         echo "<div class='alert alert-danger'>Please Do Login First !</div>";
+//     }
+// }
 
 function emailErrorOnLoginPage()
 {

@@ -8,7 +8,7 @@ require  '../common/sessions.php';
  *  function to check if user is logged in or not
  *  if logged in then and then allow to access dashboard 
  * */
-checkLogin();
+// checkLogin();
 
 $listUserData = listUser($connection);
 $result = $listUserData['result'];
@@ -26,7 +26,7 @@ $stateFilter = $listUserData['stateFilter'];
 
 <?php
 $pageTitle  = 'Dashboard';
-include '../common/htmlHeader.php' ;
+include '../common/htmlHeader.php';
 ?>
 
 <body>
@@ -38,9 +38,9 @@ include '../common/htmlHeader.php' ;
 
     <br>
     <?php
-    if (hasPermission('add_user')) {
-        echo '<a href="../frontend/addUserForm.php" style="float: right;"><button class="btn btn-success">+ Add New</button></a>';
-    }
+    // if (hasPermission('add_user')) {
+    //     echo '<a href="../frontend/addUserForm.php" style="float: right;"><button class="btn btn-success">+ Add New</button></a>';
+    // }
     ?>
 
     <!-- search and filter  -->
@@ -48,25 +48,30 @@ include '../common/htmlHeader.php' ;
         <div class="row">
             <input type="text" id="search-box" name="search" placeholder="Search users..." value="<?= htmlspecialchars($searchResult) ?>" />
             <br>
-            <select name="countryFilter">
+            <select name="countryFilter" id="country">
                 <option value="">Filter by Country</option>
                 <?php
+                // $countries = $connection->query("SELECT id, name FROM countries");
+                // while ($row = $countries->fetch_assoc()) {
+                //     $selected = $countryFilter == $row['name'] ? 'selected' : '';
+                //     echo "<option value='{$row['name']}' $selected>{$row['name']}</option>";
+                // }
                 $countries = $connection->query("SELECT id, name FROM countries");
                 while ($row = $countries->fetch_assoc()) {
-                    $selected = $countryFilter == $row['name'] ? 'selected' : '';
-                    echo "<option value='{$row['name']}' $selected>{$row['name']}</option>";
+                    $selected = ($countryFilter == $row['id']) ? 'selected' : '';
+                    echo "<option value='{$row['id']}' $selected>{$row['name']}</option>";
                 }
                 ?>
             </select>
 
-            <select name="stateFilter" id="state">
+            <select name="stateFilter" id="state" data-selected="<?= htmlspecialchars($stateFilter) ?>">
                 <option value="">Filter by State</option>
                 <?php
-                $states = $connection->query("SELECT id, name FROM states");
-                while ($row = $states->fetch_assoc()) {
-                    $selected = $stateFilter == $row['name'] ? 'selected' : '';
-                    echo "<option value='{$row['name']}' $selected>{$row['name']}</option>";
-                }
+                // $states = $connection->query("SELECT id, name FROM states");
+                // while ($row = $states->fetch_assoc()) {
+                //     $selected = $stateFilter == $row['name'] ? 'selected' : '';
+                //     echo "<option value='{$row['name']}' $selected>{$row['name']}</option>";
+                // }
                 ?>
             </select>
 
@@ -203,5 +208,14 @@ include '../common/htmlHeader.php' ;
     searchBox.addEventListener("input", function() {
         document.getElementById("search-filter-form").submit();
     });
+</script>
 
+
+
+
+<script src="../js/dynamicCountryState.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        countryStateDropdowns('country', 'state', '<?= $_POST['country'] ?? '' ?>', '<?= $_POST['state'] ?? '' ?>')
+    });
 </script>

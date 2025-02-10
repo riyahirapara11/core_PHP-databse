@@ -2,8 +2,8 @@
 
 $servername = "localhost";
 $username = "root";
-$password = "pHp@1189";
-$databaseName = "my_project";
+$password = "";
+$databaseName = "phpvi";
 
 // Create connection
 $connection = new mysqli($servername, $username , $password ,$databaseName);

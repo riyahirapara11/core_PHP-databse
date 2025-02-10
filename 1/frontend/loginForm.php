@@ -8,7 +8,7 @@ include '../common/htmlHeader.php' ;
 <body>
   <?php
   include '../common/sessions.php';
-  passwordUpdateAndLoginFirstMessages() ;
+  // passwordUpdateAndLoginFirstMessages() ;
   ?>
   <div class="container">
     <h1> Login form</h1>
